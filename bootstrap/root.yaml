@@ -14,7 +14,6 @@ spec:
     directory:
       recurse: true
   destination:
-    name: in-cluster
     server: https://kubernetes.default.svc
     namespace: openshift-gitops
   syncPolicy:

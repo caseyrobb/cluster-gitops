@@ -1,5 +1,5 @@
 # Set false per-cluster in values/clusters/<name>/cert-manager.yaml to opt out.
 enabled: true
 subscription:
-  channel: stable
+  channel: stable-v1
   installPlanApproval: Automatic   # flip to Manual for production-grade pinning

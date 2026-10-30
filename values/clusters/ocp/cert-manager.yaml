@@ -2,4 +2,4 @@
 # Base chart: charts/platform/cert-manager — this file only carries the delta.
 enabled: true
 subscription:
-  channel: stable
+  channel: stable-v1

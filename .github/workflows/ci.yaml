@@ -1,0 +1,140 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+env:
+  KUBECONFORM_VERSION: v0.8.0
+  # OCP 4.22 is Kubernetes 1.34 — pin helm capabilities to the target platform.
+  KUBE_VERSION: 1.34.0-0
+
+jobs:
+  yamllint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install yamllint==1.35.1
+      - name: Lint plain YAML (templates excluded — Go template syntax)
+        run: |
+          set -euo pipefail
+          yamllint -c .yamllint.yml argocd bootstrap values
+          find charts \( -name Chart.yaml -o -name values.yaml \) -print0 | xargs -0 yamllint -c .yamllint.yml
+
+  overlays:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Cluster overlays must match a chart name
+        run: python3 scripts/check_cluster_overlays.py
+
+  actionlint:
+    runs-on: ubuntu-latest
+    container:
+      image: rhysd/actionlint:1.7.4
+    steps:
+      - uses: actions/checkout@v4
+      - run: actionlint -color
+
+  argocd-manifests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install kubeconform
+        run: |
+          curl -fsSL "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz" \
+            | tar xz -C /usr/local/bin kubeconform
+
+      - name: Strict-validate root app, AppProjects, ApplicationSets
+        # Argo CD kinds resolve via kubeconform's default CRDs-catalog store.
+        # Validate per FILE: cat'ing YAMLs without --- separators merges docs
+        # into one and false-positives on duplicate keys.
+        run: |
+          set -euo pipefail
+          kubeconform -strict \
+            -schema-location default -schema-location .ci/schemas \
+            -summary -verbose \
+            bootstrap/*.yaml argocd/projects/*.yaml argocd/applicationsets/*.yaml
+
+  charts:
+    runs-on: ubuntu-latest
+    outputs:
+      charts: ${{ steps.discover.outputs.charts }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: discover
+        run: |
+          charts=$(find charts -name Chart.yaml -printf '%h\n' | sort -u | jq -R . | jq -sc .)
+          echo "charts=$charts" | tee -a "$GITHUB_OUTPUT"
+
+  helm:
+    needs: charts
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        chart: ${{ fromJSON(needs.charts.outputs.charts) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.16.3
+
+      - name: Install kubeconform
+        run: |
+          curl -fsSL "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz" \
+            | tar xz -C /usr/local/bin kubeconform
+
+      - name: Resolve dependencies (repo commits no Chart.lock)
+        run: helm dependency update "$MATRIX_CHART"
+        env:
+          MATRIX_CHART: ${{ matrix.chart }}
+
+      - name: helm lint
+        run: helm lint "$MATRIX_CHART"
+        env:
+          MATRIX_CHART: ${{ matrix.chart }}
+
+      - name: Render + validate (defaults)
+        run: |
+          set -euo pipefail
+          helm template ci "$MATRIX_CHART" --kube-version "$KUBE_VERSION" \
+            | kubeconform -strict -ignore-missing-schemas \
+                -schema-location default -schema-location .ci/schemas \
+                -summary -verbose -
+        env:
+          MATRIX_CHART: ${{ matrix.chart }}
+
+      - name: Render + validate (each cluster overlay)
+        run: |
+          set -euo pipefail
+          name=$(basename "$MATRIX_CHART")
+          found=0
+          for overlay in values/clusters/*/"$name".yaml; do
+            [ -e "$overlay" ] || continue
+            found=1
+            cluster=$(basename "$(dirname "$overlay")")
+            echo "::group::render $name @ $cluster ($overlay)"
+            helm template ci "$MATRIX_CHART" --kube-version "$KUBE_VERSION" -f "$overlay" \
+              | kubeconform -strict -ignore-missing-schemas \
+                  -schema-location default -schema-location .ci/schemas \
+                  -summary -verbose -
+            echo "::endgroup::"
+          done
+          if [ "$found" -eq 0 ]; then
+            echo "chart '$name' has no cluster overlays (renders with defaults only)"
+          fi
+        env:
+          MATRIX_CHART: ${{ matrix.chart }}

@@ -1,0 +1,3 @@
+# helm dependency artifacts — repo convention is lock-free (pins live in Chart.yaml)
+**/Chart.lock
+**/charts/*.tgz

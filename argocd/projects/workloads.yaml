@@ -6,7 +6,7 @@ metadata:
 spec:
   description: Application workloads (no cluster-scoped resources)
   sourceRepos:
-    - https://gitea.neozeon.ca/crobb/cluster-gitops.git
+    - https://github.com/caseyrobb/cluster-gitops.git
   destinations:
     - namespace: "*"
       name: "*"

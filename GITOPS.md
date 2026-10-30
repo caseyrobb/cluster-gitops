@@ -84,7 +84,7 @@ spec:
     - matrix:
         generators:
           - git:
-              repoURL: https://gitea.neozeon.ca/crobb/cluster-gitops.git
+              repoURL: https://github.com/caseyrobb/cluster-gitops.git
               revision: HEAD
               directories:
                 - path: charts/platform/*
@@ -99,7 +99,7 @@ spec:
     spec:
       project: platform
       source:
-        repoURL: https://gitea.neozeon.ca/crobb/cluster-gitops.git
+        repoURL: https://github.com/caseyrobb/cluster-gitops.git
         targetRevision: HEAD
         path: '{{.path.path}}'
         helm:

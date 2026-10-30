@@ -6,7 +6,7 @@ metadata:
 spec:
   description: Platform components — operators, cluster services, monitoring
   sourceRepos:
-    - https://gitea.neozeon.ca/crobb/cluster-gitops.git
+    - https://github.com/caseyrobb/cluster-gitops.git
     - https://chartrepo.example/*   # widen only when an upstream chart repo is wired in
   destinations:
     - namespace: "*"

@@ -8,7 +8,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://gitea.neozeon.ca/crobb/cluster-gitops.git
+    repoURL: https://github.com/caseyrobb/cluster-gitops.git
     targetRevision: HEAD
     path: argocd
     directory:

@@ -1,0 +1,52 @@
+{{- if and .Values.store.enabled .Values.store.tokenReviewer.create }}
+{{- /*
+  Vault's kubernetes auth validates ESO's projected tokens via TokenReview.
+  OpenShift (unlike kubeadm) does NOT allow system:anonymous to create
+  tokenreviews, so Vault uses this dedicated reviewer identity instead —
+  its JWT is stored in Vault's auth/ocp config (token_reviewer_jwt), never
+  in the cluster. Renew yearly: kubectl create token vault-tokenreviewer
+  -n external-secrets --duration=87600h, then re-POST the auth/ocp config.
+*/}}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vault-tokenreviewer
+  namespace: external-secrets
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+  labels:
+    app.kubernetes.io/name: external-secrets-operator
+    app.kubernetes.io/component: store
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: vault-tokenreviewer
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+  labels:
+    app.kubernetes.io/name: external-secrets-operator
+    app.kubernetes.io/component: store
+rules:
+- apiGroups: ["authentication.k8s.io"]
+  resources: ["tokenreviews"]
+  verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: vault-tokenreviewer
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+  labels:
+    app.kubernetes.io/name: external-secrets-operator
+    app.kubernetes.io/component: store
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: vault-tokenreviewer
+subjects:
+- kind: ServiceAccount
+  name: vault-tokenreviewer
+  namespace: external-secrets
+{{- end }}

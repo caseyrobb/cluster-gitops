@@ -1,0 +1,19 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: mcp-server
+  labels:
+    app.kubernetes.io/name: {{ index .Values "redhat-openshift-mcp-server" "fullnameOverride" }}
+    app.kubernetes.io/component: route
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+  to:
+    kind: Service
+    name: {{ index .Values "redhat-openshift-mcp-server" "fullnameOverride" }}
+    weight: 100
+  wildcardPolicy: None

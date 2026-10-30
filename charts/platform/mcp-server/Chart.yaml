@@ -1,0 +1,10 @@
+apiVersion: v2
+name: mcp-server
+description: Wrapper for redhat-openshift-mcp-server (openshift-helm-charts) + Route + view RBAC
+type: application
+version: 0.1.0
+appVersion: "0.3"
+dependencies:
+  - name: redhat-openshift-mcp-server
+    version: 0.3.0
+    repository: https://charts.openshift.io/

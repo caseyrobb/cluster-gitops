@@ -34,6 +34,11 @@ spec:
             - values.yaml
             - '../../../values/clusters/{{.name}}/{{.path.basename}}.yaml'
           ignoreMissingValueFiles: true
+        # helm test pods (templates/tests/<release>-test-connection) render as
+        # plain resources under `helm template` — Argo can't run helm hooks.
+        ignoreExclusions:
+          - kind: Pod
+            name: '{{.path.basename}}-test-connection'
       destination:
         server: '{{.server}}'
         namespace: '{{.path.basename}}'
@@ -44,3 +49,4 @@ spec:
         syncOptions:
           - CreateNamespace=true
           - ServerSideApply=true
+          - AdoptExistingResources=true

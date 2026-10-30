@@ -34,6 +34,9 @@ spec:
             - values.yaml
             - '../../../values/clusters/{{.name}}/{{.path.basename}}.yaml'
           ignoreMissingValueFiles: true
+        ignoreExclusions:
+          - kind: Pod
+            name: '{{.path.basename}}-test-connection'
       destination:
         server: '{{.server}}'
         namespace: '{{.path.basename}}'
@@ -44,3 +47,4 @@ spec:
         syncOptions:
           - CreateNamespace=true
           - ServerSideApply=true
+          - AdoptExistingResources=true

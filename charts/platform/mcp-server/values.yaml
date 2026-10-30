@@ -1,0 +1,62 @@
+# Wrapper values. Resource names are pinned via fullnameOverride so the GitOps
+# takeover matches the resources created by the original console install
+# (release redhat-openshift-mcp-server in namespace mcp-server).
+redhat-openshift-mcp-server:
+  fullnameOverride: redhat-openshift-mcp-server
+  openshift: true
+
+  image:
+    registry: registry.redhat.io
+    repository: openshift-mcp-tech-preview/openshift-mcp-server-rhel9
+    # PINNED — do not float; Renovate rule owns bumps.
+    version: "0.3"
+    pullPolicy: IfNotPresent
+
+  replicaCount: 1
+
+  service:
+    type: ClusterIP
+    port: 8080
+    targetPort: http
+
+  # Chart's own Route/Ingress creation unused: this cluster keeps a plain
+  # Route declared in the wrapper's templates/route.yaml (chart has none).
+  ingress:
+    enabled: false
+  httpRoute:
+    enabled: false
+
+  metrics:
+    enabled: false
+    serviceMonitor:
+      enabled: false
+    prometheusRule:
+      enabled: false
+
+  # Read-only posture, layer 2: bind the built-in `view` ClusterRole to the
+  # release ServiceAccount. Layer 1 is the server's read-only tool config.
+  # Renders ClusterRoleBinding redhat-openshift-mcp-server-view.
+  rbac:
+    create: true
+    extraClusterRoleBindings:
+      - name: view
+        roleRef:
+          kind: ClusterRole
+          name: view
+          external: true
+
+  serviceAccount:
+    create: true
+    automountToken: true
+
+  resources:
+    requests: {cpu: 100m, memory: 128Mi}
+    limits: {cpu: 100m, memory: 128Mi}
+
+  livenessProbe:
+    httpGet: {path: /healthz, port: http}
+  readinessProbe:
+    httpGet: {path: /healthz, port: http}
+
+  tls:
+    enabled: false

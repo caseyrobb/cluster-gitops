@@ -4,6 +4,11 @@
 # operator from the ExternalSecretsConfig CR — the ONLY supported way to
 # customize it (direct edits to operand resources get overwritten).
 
+operatorGroup:
+  # Required: the operator lives in its own namespace, so OLM needs a
+  # cluster-wide OperatorGroup there (RH ESO is cluster-wide only).
+  enabled: true
+
 subscription:
   package: openshift-external-secrets-operator
   channel: stable-v1
@@ -16,3 +21,18 @@ subscription:
 operand:
   create: true
   spec: {}
+
+# ClusterSecretStore (Vault backend). Disabled by default; enable per cluster
+# in values/clusters/<cluster>/<chart>.yaml.
+store:
+  enabled: false
+  name: vault
+  server: https://vault.neozeon.ca/v1
+  # KV v2 mount in Vault holding this cluster's secrets (the store-level
+  # path; per-secret subpaths are chosen by each ExternalSecret).
+  mountPath: chaos
+  # Vault kubernetes auth mount for this cluster (role binds the operand SA).
+  authPath: ocp
+  serviceAccountRef:
+    name: external-secrets
+    namespace: external-secrets

@@ -1,0 +1,15 @@
+{{- if .Values.operatorGroup.enabled }}
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: external-secrets-operator
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  labels:
+    app.kubernetes.io/name: external-secrets-operator
+    app.kubernetes.io/component: operator
+# Empty stanza is REQUIRED (validated field): with no targetNamespaces the
+# group is cluster-wide, which is the only mode RH ESO supports.
+spec: {}
+{{- end }}

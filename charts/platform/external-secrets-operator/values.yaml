@@ -4,6 +4,11 @@
 # operator from the ExternalSecretsConfig CR — the ONLY supported way to
 # customize it (direct edits to operand resources get overwritten).
 
+operatorGroup:
+  # Required: the operator lives in its own namespace, so OLM needs a
+  # cluster-wide OperatorGroup there (RH ESO is cluster-wide only).
+  enabled: true
+
 subscription:
   package: openshift-external-secrets-operator
   channel: stable-v1

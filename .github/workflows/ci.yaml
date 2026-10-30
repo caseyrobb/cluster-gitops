@@ -17,8 +17,8 @@ jobs:
   yamllint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - run: pip install yamllint==1.35.1
@@ -31,8 +31,8 @@ jobs:
   overlays:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - name: Cluster overlays must match a chart name
@@ -43,13 +43,13 @@ jobs:
     container:
       image: rhysd/actionlint:1.7.4
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: actionlint -color
 
   argocd-manifests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install kubeconform
         run: |
@@ -72,7 +72,7 @@ jobs:
     outputs:
       charts: ${{ steps.discover.outputs.charts }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - id: discover
         run: |
           charts=$(find charts -name Chart.yaml -printf '%h\n' | sort -u | jq -R . | jq -sc .)
@@ -86,7 +86,7 @@ jobs:
       matrix:
         chart: ${{ fromJSON(needs.charts.outputs.charts) }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: azure/setup-helm@v4
         with:

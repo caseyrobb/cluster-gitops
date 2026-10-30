@@ -12,7 +12,7 @@ This structure keeps a single repository, packages everything as Helm charts, av
 - Templating: Enable `goTemplate: true + missingkey=error` for reliable variable substitution (`{{.name}}, {{.server}}`, path helpers, labels).
 
 ## Repository Structure
-
+```
 openshift-gitops/
 ├── README.md
 ├── bootstrap/                          # Root bootstrap (App-of-Apps or initial ApplicationSet)
@@ -52,7 +52,7 @@ openshift-gitops/
 │       └── ...
 └── clusters/                           # Optional: documentation or registration helpers
     └── README.md                       # How to register + label clusters
-
+```
 
 Then reference `values-{{.name}}.yaml` directly. Centralized `values/` scales better when many clusters share charts or when platform teams own overrides separately.
 

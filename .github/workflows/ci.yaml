@@ -40,11 +40,18 @@ jobs:
 
   actionlint:
     runs-on: ubuntu-latest
-    container:
-      image: rhysd/actionlint:1.7.4
+    env:
+      ACTIONLINT_VERSION: v1.7.12
     steps:
       - uses: actions/checkout@v5
-      - run: actionlint -color
+      - name: Run actionlint
+        # Binary install (not the container image): actions/* run their own
+        # Node runtime, which the musl-based actionlint image cannot execute.
+        run: |
+          set -euo pipefail
+          curl -fsSL "https://github.com/rhysd/actionlint/releases/download/${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION#v}_linux_amd64.tar.gz" \
+            | tar xz -C /usr/local/bin actionlint
+          actionlint -color
 
   argocd-manifests:
     runs-on: ubuntu-latest

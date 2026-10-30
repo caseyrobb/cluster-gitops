@@ -27,12 +27,24 @@ operand:
 store:
   enabled: false
   name: vault
-  server: https://vault.neozeon.ca/v1
+  server: https://vault.neozeon.ca
   # KV v2 mount in Vault holding this cluster's secrets (the store-level
   # path; per-secret subpaths are chosen by each ExternalSecret).
   mountPath: chaos
   # Vault kubernetes auth mount for this cluster (role binds the operand SA).
   authPath: ocp
+  # Vault role under authPath (RH operand v1 schema requires it explicitly).
+  role: external-secrets
+  # KV version enum is lowercase in the RH operand (v1|v2).
+  version: v2
+  # Destination CIDRs allowed for the operand's Vault egress (the operator's
+  # eso-sys-deny-all-traffic only allows DNS + API server). Set per cluster,
+  # e.g. the VIP the hostname resolves to on the LAN.
+  egressCidrs: []
+  tokenReviewer:
+    # SA + RBAC so Vault (not system:anonymous) can create TokenReviews on
+    # OpenShift. The issued JWT lives only in Vault's auth/<path> config.
+    create: true
   serviceAccountRef:
     name: external-secrets
     namespace: external-secrets

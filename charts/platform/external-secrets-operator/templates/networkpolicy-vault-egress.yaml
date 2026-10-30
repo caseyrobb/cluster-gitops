@@ -1,0 +1,32 @@
+{{- if and .Values.store.enabled .Values.store.egressCidrs }}
+{{- /*
+  The RH operator hardens the operand namespace with eso-sys-deny-all-traffic,
+  which only allows DNS + API-server egress. Reaching an external secret
+  backend therefore needs an explicit, additional allow policy (NetworkPolicies
+  are additive). Only the main controller talks to Vault.
+*/}}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: eso-allow-vault-egress
+  namespace: external-secrets
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+  labels:
+    app.kubernetes.io/name: external-secrets-operator
+    app.kubernetes.io/component: store
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: external-secrets
+  policyTypes: ["Egress"]
+  egress:
+  - to:
+    {{- range .Values.store.egressCidrs }}
+    - ipBlock:
+        cidr: {{ . }}
+    {{- end }}
+    ports:
+    - protocol: TCP
+      port: 443
+{{- end }}

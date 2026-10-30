@@ -1,0 +1,5 @@
+# Per-cluster overrides for cluster "ocp" (must match the cluster secret name).
+# Base chart: charts/platform/cert-manager — this file only carries the delta.
+enabled: true
+subscription:
+  channel: stable

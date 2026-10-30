@@ -1,0 +1,15 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: workloads
+  namespace: openshift-gitops
+spec:
+  description: Application workloads (no cluster-scoped resources)
+  sourceRepos:
+    - https://gitea.neozeon.ca/crobb/cluster-gitops.git
+  destinations:
+    - namespace: "*"
+      name: "*"
+      server: "*"
+  # stay namespaced: no clusterResourceWhitelist entry => cluster-scoped resources denied
+  roles: []

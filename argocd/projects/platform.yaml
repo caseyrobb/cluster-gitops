@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: platform
+  namespace: openshift-gitops
+spec:
+  description: Platform components — operators, cluster services, monitoring
+  sourceRepos:
+    - https://gitea.neozeon.ca/crobb/cluster-gitops.git
+    - https://chartrepo.example/*   # widen only when an upstream chart repo is wired in
+  destinations:
+    - namespace: "*"
+      name: "*"
+      server: "*"
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
+  roles: []

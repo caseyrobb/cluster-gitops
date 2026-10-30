@@ -1,0 +1,46 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: platform
+  namespace: openshift-gitops
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - matrix:
+        generators:
+          - git:
+              repoURL: https://gitea.neozeon.ca/crobb/cluster-gitops.git
+              revision: HEAD
+              directories:
+                - path: charts/platform/*
+          - clusters:
+              selector:
+                matchLabels:
+                  argocd.argoproj.io/secret-type: cluster
+                  env: homelab
+  template:
+    metadata:
+      name: '{{.name}}-{{.path.basename}}'
+    spec:
+      project: platform
+      source:
+        repoURL: https://gitea.neozeon.ca/crobb/cluster-gitops.git
+        targetRevision: HEAD
+        path: '{{.path.path}}'
+        helm:
+          releaseName: '{{.path.basename}}'
+          valueFiles:
+            - values.yaml
+            - '../../../values/clusters/{{.name}}/{{.path.basename}}.yaml'
+          ignoreMissingValueFiles: true
+      destination:
+        server: '{{.server}}'
+        namespace: '{{.path.basename}}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true

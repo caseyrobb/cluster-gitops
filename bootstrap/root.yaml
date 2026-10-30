@@ -1,0 +1,26 @@
+# Root bootstrap (app-of-apps). Apply once:  oc apply -f bootstrap/root.yaml
+# Everything under argocd/ (projects + ApplicationSets) becomes Argo-managed from here.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: gitops-root
+  namespace: openshift-gitops
+spec:
+  project: default
+  source:
+    repoURL: https://gitea.neozeon.ca/crobb/cluster-gitops.git
+    targetRevision: HEAD
+    path: argocd
+    directory:
+      recurse: true
+  destination:
+    name: in-cluster
+    server: https://kubernetes.default.svc
+    namespace: openshift-gitops
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

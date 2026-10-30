@@ -1,0 +1,18 @@
+# Red Hat ESO lifecycle is OLM-driven (Subscription), packaged here as a chart
+# per this repo's GitOps convention. The operand (external-secrets, webhook,
+# cert-controller in namespace `external-secrets`) is reconciled by the
+# operator from the ExternalSecretsConfig CR — the ONLY supported way to
+# customize it (direct edits to operand resources get overwritten).
+
+subscription:
+  package: openshift-external-secrets-operator
+  channel: stable-v1
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace
+  # Flip to Manual for production-grade version pinning.
+  installPlanApproval: Automatic
+
+# Cluster-scoped operand config (name is fixed: "cluster").
+operand:
+  create: true
+  spec: {}

@@ -1,0 +1,6 @@
+apiVersion: v2
+name: external-secrets-operator
+description: External Secrets Operator for Red Hat OpenShift (Subscription + ExternalSecretsConfig)
+type: application
+version: 0.1.0
+appVersion: "1.2.1"

@@ -1,0 +1,37 @@
+{{- if .Values.oauth.enabled }}
+{{- /*
+  OpenShift OAuth with Keycloak (realm homelab) as OpenID IdP.
+  NOTE: OCP 4.22.20's OAuth CRD serves the classic `openID` provider block
+  (verified via CRD schema; there is no `oidc` block on this build).
+  ca: omitted deliberately - keycloak.neozeon.ca serves a publicly-trusted
+  cert, default system roots validate it.
+  mappingMethod: claim -> identity reused across providers by claim match.
+*/}}
+apiVersion: config.openshift.io/v1
+kind: OAuth
+metadata:
+  name: cluster
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  labels:
+    app.kubernetes.io/name: openshift-oauth
+spec:
+  identityProviders:
+  - name: {{ .Values.oauth.providerName }}
+    mappingMethod: claim
+    type: OpenID
+    openID:
+      clientID: {{ .Values.oauth.clientID }}
+      clientSecret:
+        name: {{ .Values.oauth.clientSecretName }}
+      issuer: {{ .Values.oauth.issuer }}
+      claims:
+        email:
+{{ toYaml .Values.oauth.claims.email | indent 8 }}
+        groups:
+{{ toYaml .Values.oauth.claims.groups | indent 8 }}
+        name:
+{{ toYaml .Values.oauth.claims.name | indent 8 }}
+        preferredUsername:
+{{ toYaml .Values.oauth.claims.preferredUsername | indent 8 }}
+{{- end }}

@@ -1,0 +1,5 @@
+apiVersion: v2
+name: openshift-oauth
+description: OpenShift OAuth via Keycloak OIDC (homelab realm, GitHub-brokered)
+version: 0.1.0
+type: application

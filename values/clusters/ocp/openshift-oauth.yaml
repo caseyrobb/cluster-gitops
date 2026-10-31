@@ -1,0 +1,4 @@
+# Keycloak SSO for the OCP homelab cluster (client registered on chaos via
+# caseyrobb/iac apps/openshift-sso MR; realm homelab is GitHub-brokered).
+oauth:
+  enabled: true

@@ -1,0 +1,23 @@
+# Cluster-scoped OAuth CR + client-secret ExternalSecret. Gated per cluster.
+# The Keycloak client itself is registered on chaos via caseyrobb/iac
+# apps/openshift-sso (KeycloakOIDCClient); BOTH sides read the same Vault
+# secret chaos/data/keycloak/ocp-client {"client-secret": ...}.
+oauth:
+  enabled: false
+  providerName: keycloak
+  issuer: https://keycloak.neozeon.ca/realms/homelab
+  clientID: openshift
+  # Secret in openshift-config, written by the ExternalSecret below.
+  clientSecretName: ocp-keycloak-client
+  secretStore: vault
+  vaultPath: keycloak/ocp-client
+  vaultProperty: client-secret
+  claims:
+    email:
+    - email
+    groups:
+    - groups
+    name:
+    - name
+    preferredUsername:
+    - preferred_username

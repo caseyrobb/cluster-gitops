@@ -31,6 +31,7 @@ CLUSTER_CRDS = [
     "externalsecrets.external-secrets.io",
     "clusterissuers.cert-manager.io",
     "certificates.cert-manager.io",
+    "oauths.config.openshift.io",
 ]
 
 # Argo CD CRDs (match OpenShift GitOps ROSG 1.22.x = Argo CD 3.x).
@@ -55,12 +56,17 @@ def strip_and_tighten(node):
             node.setdefault("additionalProperties", False)
         for v in node.get("properties", {}).values():
             strip_and_tighten(v)
-        if isinstance(node.get("items"), (dict, list)):
-            items = node["items"]
-            (strip_and_tighten(items) if isinstance(items, dict)
-             else [strip_and_tighten(i) for i in items])
         if isinstance(node.get("additionalProperties"), dict):
             strip_and_tighten(node["additionalProperties"])
+    # array element schemas must be tightened too, whether or not the parent
+    # is an object node (type: array nodes have no 'properties' — a latent
+    # gap that left every identityProviders[]-style item unchecked)
+    items = node.get("items")
+    if isinstance(items, dict):
+        strip_and_tighten(items)
+    elif isinstance(items, list):
+        for i in items:
+            strip_and_tighten(i)
     for key in ("anyOf", "oneOf", "allOf"):
         for v in node.get(key, []):
             strip_and_tighten(v)

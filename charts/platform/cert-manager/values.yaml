@@ -11,7 +11,8 @@ acme:
   email: ""
   issuerName: letsencrypt
   # cert-manager operator namespace (Subscription-installed).
-  certManagerNamespace: openshift-cert-manager
+  # Ground-truth operand ns (verified: deploy/cert-manager -n cert-manager).
+  certManagerNamespace: cert-manager
   secretStore: vault
   # Vault KV v2 path (under the store's mount) holding {"api-token": "..."}
   vaultPath: ocp/cloudflare-api-token

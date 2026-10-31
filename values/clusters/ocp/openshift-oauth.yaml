@@ -2,3 +2,8 @@
 # caseyrobb/iac apps/openshift-sso MR; realm homelab is GitHub-brokered).
 oauth:
   enabled: true
+  rbac:
+    ocp-cluster-admins:
+      clusterRole: cluster-admin
+      users:
+      - crobb

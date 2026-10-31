@@ -21,3 +21,8 @@ oauth:
     - name
     preferredUsername:
     - preferred_username
+  # Optional: map OpenShift Groups (name == Keycloak group short name,
+  # emitted by the client's ocp-groups-claim mapper) to ClusterRoles.
+  # Membership syncs from the claim at login; seed via `oc adm groups
+  # add-users <group> <user>` for immediate effect.
+  rbac: {}

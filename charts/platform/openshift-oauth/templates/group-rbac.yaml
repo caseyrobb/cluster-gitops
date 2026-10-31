@@ -1,0 +1,27 @@
+{{- if and .Values.oauth.enabled .Values.oauth.rbac }}
+{{- range $name, $rb := .Values.oauth.rbac }}
+---
+# OpenShift Group; membership populated from the Keycloak 'groups' claim at
+# login (client mapper ocp-groups-claim, short names) and/or imperatively
+# via `oc adm groups add-users`.
+apiVersion: user.openshift.io/v1
+kind: Group
+metadata:
+  name: {{ $name }}
+users:
+  {{- toYaml $rb.users | nindent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ $name }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ $rb.clusterRole }}
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: Group
+  name: {{ $name }}
+{{- end }}
+{{- end }}

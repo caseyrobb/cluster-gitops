@@ -28,6 +28,9 @@ CLUSTER_CRDS = [
     "operatorgroups.operators.coreos.com",
     "subscriptions.operators.coreos.com",
     "externalsecretsconfigs.operator.openshift.io",
+    "externalsecrets.external-secrets.io",
+    "clusterissuers.cert-manager.io",
+    "certificates.cert-manager.io",
 ]
 
 # Argo CD CRDs (match OpenShift GitOps ROSG 1.22.x = Argo CD 3.x).

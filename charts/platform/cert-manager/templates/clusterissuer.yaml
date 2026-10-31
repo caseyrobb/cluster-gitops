@@ -1,0 +1,23 @@
+{{- if .Values.acme.enabled }}
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: {{ .Values.acme.issuerName }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  labels:
+    app.kubernetes.io/name: cert-manager
+    app.kubernetes.io/component: issuer
+spec:
+  acme:
+    server: {{ .Values.acme.server }}
+    email: {{ required "acme.email is required when acme.enabled" .Values.acme.email }}
+    privateKeySecretRef:
+      name: {{ .Values.acme.issuerName }}-acme-account
+    solvers:
+    - dns01:
+        cloudflare:
+          apiTokenSecretRef:
+            name: {{ .Values.acme.tokenSecret.name }}
+            key: {{ .Values.acme.tokenSecret.key }}
+{{- end }}

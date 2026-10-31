@@ -1,0 +1,32 @@
+{{- if .Values.acme.enabled }}
+{{- /*
+  Wildcard cert for the OpenShift router, issued via DNS-01 and delivered
+  in the router namespace (Certificate must live where its
+  secret is created — the CRD has no cross-namespace delivery). Bootstrap (once, imperative — the
+  IngressController itself stays owned by the ingress operator):
+    oc -n openshift-ingress-operator patch ingresscontroller default \
+      --type=merge -p '{"spec":{"defaultCertificate":{"name":"<secretName>"}}}'
+*/}}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ .Values.acme.routerCert.name }}
+  namespace: {{ .Values.acme.routerCert.secretNamespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+  labels:
+    app.kubernetes.io/name: cert-manager
+    app.kubernetes.io/component: router-cert
+spec:
+  secretName: {{ .Values.acme.routerCert.name }}
+  issuerRef:
+    kind: ClusterIssuer
+    name: {{ .Values.acme.issuerName }}
+  privateKey:
+    algorithm: {{ .Values.acme.routerCert.keyAlgorithm }}
+    rotationPolicy: Always
+  dnsNames:
+  {{- range .Values.acme.routerCert.dnsNames }}
+  - {{ . | quote }}
+  {{- end }}
+{{- end }}

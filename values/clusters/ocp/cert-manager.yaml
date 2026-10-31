@@ -3,3 +3,10 @@
 enabled: true
 subscription:
   channel: stable-v1
+
+# Public ACME wildcard for the router via Cloudflare DNS-01.
+# Delegation: redcomet.ca NS = Cloudflare (registrar); token in Vault at
+# chaos/data/ocp/cloudflare-api-token (Zone/DNS/Edit scoped to redcomet.ca).
+acme:
+  enabled: true
+  email: caseyrobb@pm.me

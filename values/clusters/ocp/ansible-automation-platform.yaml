@@ -1,0 +1,3 @@
+# AAP operator on the homelab OCP cluster (operator only; no AAP instance CR
+# yet). Overrides would set e.g. subscription.installPlanApproval: Manual
+# plus a pinned startingCSV for production.

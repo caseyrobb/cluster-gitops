@@ -1,0 +1,16 @@
+{{- if .Values.operatorGroup.enabled }}
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: ansible-automation-platform-operator
+  namespace: {{ .Values.namespace.name }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  labels:
+    app.kubernetes.io/name: ansible-automation-platform
+    app.kubernetes.io/component: operator
+# Empty stanza is REQUIRED (validated field): with no targetNamespaces the
+# group is cluster-wide, so the operator can reconcile AAP CRs in any
+# namespace.
+spec: {}
+{{- end }}

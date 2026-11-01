@@ -1,0 +1,6 @@
+apiVersion: v2
+name: ansible-automation-platform
+description: Ansible Automation Platform Operator for Red Hat OpenShift (OLM Subscription)
+type: application
+version: 0.1.0
+appVersion: "2.7.0"

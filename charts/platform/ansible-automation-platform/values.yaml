@@ -1,0 +1,25 @@
+# AAP operator lifecycle is OLM-driven (Subscription from redhat-operators),
+# packaged as a chart per this repo's GitOps convention. Deploying the
+# operator only creates the controller + CRDs; an actual AAP instance is a
+# separate `ansibleautomationplatforms.ansible-automation-platform.io` CR
+# (not created here — decide sizing/HA deliberately when we get there).
+#
+# Channel choice: `stable-2.7` is the standard operator. Red Hat also ships
+# `stable-2.7-cluster-scoped` (adds e.g. AWX import features); stay on
+# stable-2.7 unless those are needed.
+
+namespace:
+  create: true
+  name: ansible-automation-platform
+
+operatorGroup:
+  # Cluster-wide (spec: {}) so AAP instances may live in any namespace.
+  enabled: true
+
+subscription:
+  package: ansible-automation-platform-operator
+  channel: stable-2.7
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace
+  # Automatic matches the ESO chart's posture for the homelab cluster.
+  installPlanApproval: Automatic

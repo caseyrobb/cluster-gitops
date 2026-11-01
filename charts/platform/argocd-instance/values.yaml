@@ -1,0 +1,8 @@
+# The ROSG ArgoCD instance (chicken-and-egg: the instance hosts its own
+# GitOps). Only the fields declared below are GitOps-owned; everything
+# else stays operator-managed. Gated per cluster overlay.
+argocdInstance:
+  enabled: false
+  name: openshift-gitops
+  namespace: openshift-gitops
+  rbac: {}

@@ -1,0 +1,5 @@
+apiVersion: v2
+name: argocd-instance
+description: Declares the GitOps-owned slice of the ROSG ArgoCD CR (RBAC).
+version: 0.1.0
+appVersion: "1.0"

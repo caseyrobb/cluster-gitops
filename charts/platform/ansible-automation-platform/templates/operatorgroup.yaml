@@ -9,8 +9,14 @@ metadata:
   labels:
     app.kubernetes.io/name: ansible-automation-platform
     app.kubernetes.io/component: operator
-# Empty stanza is REQUIRED (validated field): with no targetNamespaces the
-# group is cluster-wide, so the operator can reconcile AAP CRs in any
-# namespace.
-spec: {}
+# SingleNamespace mode REQUIRED on the standard stable-2.7 channel: its
+# bundle declares only the SingleNamespace install mode, and a cluster-wide
+# group (spec: {}) makes OLM fail the CSV with UnsupportedOperatorGroup
+# ("AllNamespaces InstallModeType not supported") — verified live.
+# AAP instances therefore live in this same namespace (Red Hat's standard
+# topology). Want cross-namespace instances? Switch subscription.channel to
+# stable-2.7-cluster-scoped instead.
+spec:
+  targetNamespaces:
+  - {{ .Values.namespace.name }}
 {{- end }}

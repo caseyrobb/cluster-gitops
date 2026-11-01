@@ -13,7 +13,9 @@ namespace:
   name: ansible-automation-platform
 
 operatorGroup:
-  # Cluster-wide (spec: {}) so AAP instances may live in any namespace.
+  # Namespaced to the operator namespace: REQUIRED for the standard
+  # stable-2.7 channel (bundle supports SingleNamespace only). Create the
+  # AnsibleAutomationPlatform CR in the same namespace.
   enabled: true
 
 subscription:

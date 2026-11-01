@@ -1,0 +1,12 @@
+# ArgoCD RBAC for the homelab instance. Group subjects are OpenShift
+# Groups (resolved from user.openshift.io Group resources at authz time,
+# i.e. Keycloak `groups` claim membership + GitOps seeds).
+argocdInstance:
+  enabled: true
+  rbac:
+    policy: |
+      g, system:cluster-admins, role:admin
+      g, cluster-admins, role:admin
+      g, ocp-cluster-admins, role:admin
+    defaultPolicy: ""
+    scopes: "[groups]"

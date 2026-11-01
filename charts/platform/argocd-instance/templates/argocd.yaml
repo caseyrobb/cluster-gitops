@@ -1,0 +1,13 @@
+{{- if .Values.argocdInstance.enabled }}
+apiVersion: argoproj.io/v1alpha1
+kind: ArgoCD
+metadata:
+  name: {{ .Values.argocdInstance.name }}
+  namespace: {{ .Values.argocdInstance.namespace }}
+spec:
+  # Field-scoped declaration: ServerSideApply makes ArgoCD own only the
+  # fields rendered here; the openshift-gitops operator keeps the rest of
+  # the spec. The operator syncs spec.rbac -> cm/argocd-rbac-cm.
+  rbac:
+    {{- toYaml .Values.argocdInstance.rbac | nindent 4 }}
+{{- end }}

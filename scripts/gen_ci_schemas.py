@@ -32,6 +32,7 @@ CLUSTER_CRDS = [
     "clusterissuers.cert-manager.io",
     "certificates.cert-manager.io",
     "oauths.config.openshift.io",
+    "argocds.argoproj.io",
 ]
 
 # API kinds served by aggregated apiservers (no CRD objects exist).

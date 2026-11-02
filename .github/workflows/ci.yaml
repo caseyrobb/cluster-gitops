@@ -124,6 +124,20 @@ jobs:
         env:
           MATRIX_CHART: ${{ matrix.chart }}
 
+      - name: Render with master switch off (must be empty)
+        # enabled=false must produce ZERO resources: every template (and any
+        # Helm dependency via Chart.yaml `condition: enabled`) is gated.
+        run: |
+          set -euo pipefail
+          out=$(helm template ci "$MATRIX_CHART" --kube-version "$KUBE_VERSION" --set enabled=false)
+          if [ -n "$(printf '%s' "$out" | tr -d '[:space:]')" ]; then
+            echo "::error::chart renders resources with enabled=false"
+            printf '%s\n' "$out" | head -20
+            exit 1
+          fi
+        env:
+          MATRIX_CHART: ${{ matrix.chart }}
+
       - name: Render + validate (each cluster overlay)
         run: |
           set -euo pipefail

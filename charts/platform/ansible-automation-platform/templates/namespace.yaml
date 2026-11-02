@@ -1,3 +1,4 @@
+{{- if .Values.enabled }}
 {{- if .Values.namespace.create }}
 apiVersion: v1
 kind: Namespace
@@ -8,4 +9,5 @@ metadata:
   labels:
     app.kubernetes.io/name: ansible-automation-platform
     app.kubernetes.io/part-of: ansible-automation-platform
+{{- end }}
 {{- end }}

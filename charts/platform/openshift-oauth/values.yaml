@@ -2,6 +2,12 @@
 # The Keycloak client itself is registered on chaos via caseyrobb/iac
 # apps/openshift-sso (KeycloakOIDCClient); BOTH sides read the same Vault
 # secret chaos/data/keycloak/ocp-client {"client-secret": ...}.
+# Master switch for the whole chart. Per-cluster overlays
+# (values/clusters/<cluster>/<chart>.yaml) set this to false to
+# disable the chart on that cluster; ArgoCD prunes its resources
+# and the app stays Synced/Healthy rendering nothing.
+enabled: true
+
 oauth:
   enabled: false
   providerName: keycloak

@@ -3,6 +3,12 @@
 # cert-controller in namespace `external-secrets`) is reconciled by the
 # operator from the ExternalSecretsConfig CR — the ONLY supported way to
 # customize it (direct edits to operand resources get overwritten).
+# Master switch for the whole chart. Per-cluster overlays
+# (values/clusters/<cluster>/<chart>.yaml) set this to false to
+# disable the chart on that cluster; ArgoCD prunes its resources
+# and the app stays Synced/Healthy rendering nothing.
+enabled: true
+
 
 operatorGroup:
   # Required: the operator lives in its own namespace, so OLM needs a

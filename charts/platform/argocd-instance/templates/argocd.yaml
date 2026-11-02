@@ -1,3 +1,4 @@
+{{- if .Values.enabled }}
 {{- if .Values.argocdInstance.enabled }}
 apiVersion: argoproj.io/v1alpha1
 kind: ArgoCD
@@ -10,4 +11,5 @@ spec:
   # the spec. The operator syncs spec.rbac -> cm/argocd-rbac-cm.
   rbac:
     {{- toYaml .Values.argocdInstance.rbac | nindent 4 }}
+{{- end }}
 {{- end }}

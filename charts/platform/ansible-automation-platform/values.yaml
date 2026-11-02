@@ -7,6 +7,12 @@
 # Channel choice: `stable-2.7` is the standard operator. Red Hat also ships
 # `stable-2.7-cluster-scoped` (adds e.g. AWX import features); stay on
 # stable-2.7 unless those are needed.
+# Master switch for the whole chart. Per-cluster overlays
+# (values/clusters/<cluster>/<chart>.yaml) set this to false to
+# disable the chart on that cluster; ArgoCD prunes its resources
+# and the app stays Synced/Healthy rendering nothing.
+enabled: true
+
 
 namespace:
   create: true

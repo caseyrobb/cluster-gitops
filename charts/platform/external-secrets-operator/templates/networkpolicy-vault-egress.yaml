@@ -1,3 +1,4 @@
+{{- if .Values.enabled }}
 {{- if and .Values.store.enabled .Values.store.egressCidrs }}
 {{- /*
   The RH operator hardens the operand namespace with eso-sys-deny-all-traffic,
@@ -29,4 +30,5 @@ spec:
     ports:
     - protocol: TCP
       port: 443
+{{- end }}
 {{- end }}

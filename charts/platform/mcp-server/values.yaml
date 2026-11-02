@@ -1,6 +1,12 @@
 # Wrapper values. Resource names are pinned via fullnameOverride so the GitOps
 # takeover matches the resources created by the original console install
 # (release redhat-openshift-mcp-server in namespace mcp-server).
+# Master switch for the whole chart. Per-cluster overlays
+# (values/clusters/<cluster>/<chart>.yaml) set this to false to
+# disable the chart on that cluster; ArgoCD prunes its resources
+# and the app stays Synced/Healthy rendering nothing.
+enabled: true
+
 redhat-openshift-mcp-server:
   fullnameOverride: redhat-openshift-mcp-server
   openshift: true

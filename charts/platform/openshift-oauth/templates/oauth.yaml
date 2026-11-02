@@ -1,3 +1,4 @@
+{{- if .Values.enabled }}
 {{- if .Values.oauth.enabled }}
 {{- /*
   OpenShift OAuth with Keycloak (realm homelab) as OpenID IdP.
@@ -34,4 +35,5 @@ spec:
 {{ toYaml .Values.oauth.claims.name | indent 8 }}
         preferredUsername:
 {{ toYaml .Values.oauth.claims.preferredUsername | indent 8 }}
+{{- end }}
 {{- end }}

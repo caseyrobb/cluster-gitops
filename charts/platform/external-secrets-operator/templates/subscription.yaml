@@ -1,3 +1,4 @@
+{{- if .Values.enabled }}
 {{- if .Values.subscription }}
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
@@ -15,4 +16,5 @@ spec:
   name: {{ .Values.subscription.package }}
   source: {{ .Values.subscription.source }}
   sourceNamespace: {{ .Values.subscription.sourceNamespace }}
+{{- end }}
 {{- end }}

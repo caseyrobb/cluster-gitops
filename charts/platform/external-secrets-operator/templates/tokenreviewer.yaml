@@ -1,3 +1,4 @@
+{{- if .Values.enabled }}
 {{- if and .Values.store.enabled .Values.store.tokenReviewer.create }}
 {{- /*
   Vault's kubernetes auth validates ESO's projected tokens via TokenReview.
@@ -49,4 +50,5 @@ subjects:
 - kind: ServiceAccount
   name: vault-tokenreviewer
   namespace: external-secrets
+{{- end }}
 {{- end }}

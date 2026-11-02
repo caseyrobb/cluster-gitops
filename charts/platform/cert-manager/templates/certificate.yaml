@@ -1,3 +1,4 @@
+{{- if .Values.enabled }}
 {{- if .Values.acme.enabled }}
 {{- /*
   Wildcard cert for the OpenShift router, issued via DNS-01 and delivered
@@ -29,4 +30,5 @@ spec:
   {{- range .Values.acme.routerCert.dnsNames }}
   - {{ . | quote }}
   {{- end }}
+{{- end }}
 {{- end }}

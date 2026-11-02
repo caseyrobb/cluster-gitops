@@ -8,3 +8,7 @@ dependencies:
   - name: redhat-openshift-mcp-server
     version: 0.3.0
     repository: https://charts.openshift.io/
+    # Tied to the parent chart's top-level `enabled` master switch: when an
+    # overlay sets enabled=false, Helm excludes the dependency entirely
+    # (template gates alone do not reach subcharts).
+    condition: enabled

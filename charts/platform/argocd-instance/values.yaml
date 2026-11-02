@@ -1,6 +1,12 @@
 # The ROSG ArgoCD instance (chicken-and-egg: the instance hosts its own
 # GitOps). Only the fields declared below are GitOps-owned; everything
 # else stays operator-managed. Gated per cluster overlay.
+# Master switch for the whole chart. Per-cluster overlays
+# (values/clusters/<cluster>/<chart>.yaml) set this to false to
+# disable the chart on that cluster; ArgoCD prunes its resources
+# and the app stays Synced/Healthy rendering nothing.
+enabled: true
+
 argocdInstance:
   enabled: false
   name: openshift-gitops

@@ -1,0 +1,38 @@
+# RHACS (StackRox) operator lifecycle is OLM-driven (Subscription from
+# redhat-operators), packaged as a chart per this repo's GitOps convention.
+# This chart installs the OPERATOR only (controller + CRDs
+# centrals.platform.stackrox.io / securedclusters.platform.stackrox.io).
+# Central + SecuredCluster instances are a separate, deliberate follow-up
+# (redhat-cop gitops-catalog pattern: instances in their own `stackrox`
+# namespace plus a create-cluster-init-bundle job for self-managing the
+# SecuredCluster on the same cluster).
+#
+# Channel choice: `stable` (cluster default; verified 2026-11-06 resolving to
+# rhacs-operator.v4.0.0). Pin a rhacs-4.x channel here for version control.
+#
+# Master switch for the whole chart. Per-cluster overlays
+# (values/clusters/<cluster>/<chart>.yaml) set this to false to
+# disable the chart on that cluster; ArgoCD prunes its resources
+# and the app stays Synced/Healthy rendering nothing.
+enabled: true
+
+namespace:
+  create: true
+  name: rhacs-operator
+
+operatorGroup:
+  # AllNamespaces (cluster-wide) is REQUIRED: the stable CSV
+  # (rhacs-operator.v4.0.0, verified live from the catalog) supports ONLY the
+  # AllNamespaces install mode — OwnNamespace/SingleNamespace/MultiNamespace
+  # are all False, so a targetNamespaces group makes OLM fail the CSV with
+  # UnsupportedOperatorGroup. An empty spec = cluster-wide group.
+  # (Opposite posture from the AAP/CNV charts.)
+  enabled: true
+
+subscription:
+  package: rhacs-operator
+  channel: stable
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace
+  # Automatic matches the other operator charts' homelab posture.
+  installPlanApproval: Automatic

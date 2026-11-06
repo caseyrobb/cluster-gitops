@@ -1,0 +1,3 @@
+# RHACS operator on the homelab OCP cluster (operator only; Central +
+# SecuredCluster instances follow in a separate chart once this lands).
+# Overrides could pin subscription.channel: rhacs-4.x + startingCSV.

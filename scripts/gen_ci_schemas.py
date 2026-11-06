@@ -72,6 +72,9 @@ SOFT_CLUSTER_CRDS = [
     # as HCO). Snapshotted from the live cluster once the operator is installed.
     "ansibleautomationplatforms.aap.ansible.com",
     "ansiblemcpservers.mcpserver.ansible.com",
+    # stackrox chart instances: CRDs installed by the RHACS operator (OLM).
+    "centrals.platform.stackrox.io",
+    "securedclusters.platform.stackrox.io",
 ]
 
 OUT_ROOT = os.path.join(".ci", "schemas")

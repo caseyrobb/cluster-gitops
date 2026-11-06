@@ -1,0 +1,20 @@
+{{- if .Values.enabled }}
+{{- if .Values.securedCluster.create }}
+apiVersion: platform.stackrox.io/v1alpha1
+kind: SecuredCluster
+metadata:
+  name: {{ .Values.securedCluster.name }}
+  namespace: {{ .Values.namespace.name }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+    # SecuredCluster CRD is installed by the RHACS operator (OLM), not Git.
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+  labels:
+    app.kubernetes.io/name: stackrox
+    app.kubernetes.io/component: secured-cluster
+# Self-managing cluster: needs the create-cluster-init-bundle job to have
+# applied sensor-tls/collector-tls etc. before the sensor can check in.
+spec:
+  {{- toYaml .Values.securedCluster.spec | nindent 2 }}
+{{- end }}
+{{- end }}

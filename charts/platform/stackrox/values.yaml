@@ -1,0 +1,78 @@
+# RHACS instance chart: Central (the ACS hub) + SecuredCluster for THIS
+# cluster + the redhat-cop create-cluster-init-bundle job that lets the
+# SecuredCluster running on the same cluster as Central self-manage
+# (Central cannot issue its own init bundle before a sensor exists, so a
+# one-shot job bootstraps it via the ACS API).
+#
+# Requires the rhacs-operator chart (operator + CRDs) to be installed
+# first — instance CRs carry SkipDryRunOnMissingResource and sync-wave
+# ordering, but OLM must have created the CRDs before reconciliation
+# actually starts.
+#
+# Master switch for the whole chart; per-cluster overlays set false to
+# prune everything (ArgoCD keeps the app Synced/Healthy rendering nothing).
+enabled: true
+
+namespace:
+  create: true
+  # Red Hat docs' canonical Central namespace; chart basename == this
+  # because the platform ApplicationSet derives the destination namespace
+  # from the chart directory name.
+  name: stackrox
+
+central:
+  create: false
+  name: central
+  # Mirrors the redhat-cop gitops-catalog reference instance (intentionally
+  # resource-reduced). PVC `stackrox-db` is created by the Central operator
+  # on LVMS (RWO is fine — single Central pod). Initial admin password is
+  # operator-seeded in Secret `central-htpasswd` (user `admin`).
+  # Route: https://central-stackrox.apps.<appsDomain> (LE wildcard).
+  spec:
+    central:
+      exposure:
+        loadBalancer:
+          enabled: false
+          port: 443
+        nodePort:
+          enabled: false
+        route:
+          enabled: true
+      persistence:
+        persistentVolumeClaim:
+          claimName: stackrox-db
+    egress:
+      connectivityPolicy: Online
+    scanner:
+      analyzer:
+        scaling:
+          autoScaling: Enabled
+          maxReplicas: 5
+          minReplicas: 2
+          replicas: 2
+      scannerComponent: Enabled
+
+# One-shot bootstrap job + its SA/Role/RoleBinding (wave 2). Idempotent:
+# exits 0 once secret/sensor-tls exists, so later syncs never regenerate
+# the bundle.
+clusterInitBundle:
+  create: false
+
+securedCluster:
+  create: false
+  name: local-cluster
+  # Reference sizing: eBPF collection, tolerate node taints, admission
+  # only on events (not creates/updates) to keep the homelab light.
+  # spec.clusterName is the single source of truth — the init-bundle job
+  # requests its bundle under exactly this name.
+  spec:
+    clusterName: local-cluster
+    admissionControl:
+      listenOnCreates: false
+      listenOnEvents: true
+      listenOnUpdates: false
+    perNode:
+      collector:
+        collection: EBPF
+        imageFlavor: Regular
+      taintToleration: TolerateTaints

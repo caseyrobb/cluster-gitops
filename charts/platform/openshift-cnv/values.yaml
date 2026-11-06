@@ -1,0 +1,41 @@
+# OpenShift Virtualization (HCO/KubeVirt) lifecycle is OLM-driven
+# (Subscription kubevirt-hyperconverged from redhat-operators), packaged as
+# a chart per this repo's GitOps convention. Chart dir name == namespace
+# because the platform ApplicationSet sets destination.namespace to the chart
+# basename; HCO additionally REQUIRES its namespace to be openshift-cnv.
+#
+# Channel choice: `stable` (currently v4.22.12, matches OCP 4.22);
+# `candidate` also exists — do not use unless testing pre-releases.
+#
+# CRITICAL: the stable CSV supports ONLY OwnNamespace + SingleNamespace
+# (verified against the live catalog). The OperatorGroup MUST carry
+# targetNamespaces; a cluster-wide OG fails the CSV with
+# UnsupportedOperatorGroup — verified in the CSV, not assumed.
+#
+# Master switch for the whole chart. Per-cluster overlays
+# (values/clusters/<cluster>/<chart>.yaml) set this to false to
+# disable the chart on that cluster; ArgoCD prunes its resources
+# and the app stays Synced/Healthy rendering nothing.
+enabled: true
+
+namespace:
+  create: true
+  name: openshift-cnv
+
+operatorGroup:
+  # SingleNamespace OG REQUIRED (see header comment).
+  enabled: true
+
+subscription:
+  package: kubevirt-hyperconverged
+  channel: stable
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace
+  # Automatic matches the ESO/AAP posture for the homelab cluster.
+  installPlanApproval: Automatic
+
+hyperconverged:
+  # Creates the single HyperConverged CR (must be named 'cluster' in the
+  # operator namespace) which boots virt-api/controller/handler etc.
+  # Set false for operator-only.
+  create: true

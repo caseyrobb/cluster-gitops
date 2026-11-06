@@ -1,0 +1,6 @@
+apiVersion: v2
+name: openshift-cnv
+description: OpenShift Virtualization operator (OLM Subscription + HyperConverged CR)
+type: application
+version: 0.1.0
+appVersion: "4.22.12"

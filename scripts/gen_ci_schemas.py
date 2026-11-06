@@ -47,6 +47,28 @@ ARGO_CRD_URLS = [
     for f in ("application-crd.yaml", "applicationset-crd.yaml", "appproject-crd.yaml")
 ]
 
+# CRDs owned by OLM-managed operators cannot come from CLUSTER_CRDS until the
+# operator is installed (chicken-and-egg for the installing PR itself), so
+# bootstrap them from the pinned upstream repos — same mechanism as the Argo
+# CD URLs above. Red Hat builds these operators from these upstreams; drift
+# beyond the pinned ref is caught once the operator is live: prefer moving
+# the name into CLUSTER_CRDS and regenerating from the real CRD object.
+UPSTREAM_CRD_URLS = [
+    # Nmstate CR (openshift-nmstate chart) — Kubernetes NMState operator.
+    "https://raw.githubusercontent.com/nmstate/kubernetes-nmstate/v0.87.3/deploy/crds/nmstate.io_nmstates.yaml",
+]
+
+# CRDs that MUST be snapshotted from the LIVE cluster only — the upstream
+# community CRD diverges from the Red Hat product CRD, so bootstrapping from
+# GitHub would validate against the wrong contract (verified 2026-11-06:
+# upstream HCO pins metadata.name to 'kubevirt-hyperconverged' while the
+# OpenShift Virtualization product pins it to 'cluster'). These are tried
+# from the live cluster non-fatally; once the owning operator is installed
+# they land in .ci/schemas like the rest.
+SOFT_CLUSTER_CRDS = [
+    "hyperconvergeds.hco.kubevirt.io",  # openshift-cnv chart (post-install)
+]
+
 OUT_ROOT = os.path.join(".ci", "schemas")
 
 
@@ -160,8 +182,19 @@ def main() -> int:
     for g, v, k in OPENAPI_SLICES:
         total += emit_from_slice(g, v, k)
 
+    for crd in SOFT_CLUSTER_CRDS:
+        try:
+            raw = subprocess.run(
+                ["kubectl", "get", "crd", crd, "-o", "json"],
+                env=env, capture_output=True, text=True, check=True,
+            ).stdout
+        except subprocess.CalledProcessError:
+            print(f"  skipped {crd} (operator not installed yet)")
+            continue
+        total += emit(json.loads(raw))
+
     import yaml  # noqa: E402 — needed only for the remote CRDs
-    for url in ARGO_CRD_URLS:
+    for url in ARGO_CRD_URLS + UPSTREAM_CRD_URLS:
         with urllib.request.urlopen(url, timeout=60) as r:
             total += emit(yaml.safe_load(r.read().decode()))
 

@@ -1,0 +1,35 @@
+# Kubernetes NMState operator lifecycle is OLM-driven (Subscription from
+# redhat-operators), packaged as a chart per this repo's GitOps convention.
+# Chart dir name == namespace because the platform ApplicationSet sets
+# destination.namespace to the chart basename.
+#
+# Channel choice: `stable` is the only channel for kubernetes-nmstate-operator
+# (verified against the live catalog). CSV installModes verified: OwnNamespace
+# + SingleNamespace + AllNamespaces supported, MultiNamespace NOT.
+#
+# Master switch for the whole chart. Per-cluster overlays
+# (values/clusters/<cluster>/<chart>.yaml) set this to false to
+# disable the chart on that cluster; ArgoCD prunes its resources
+# and the app stays Synced/Healthy rendering nothing.
+enabled: true
+
+namespace:
+  create: true
+  name: openshift-nmstate
+
+operatorGroup:
+  # SingleNamespace OG (same posture as the AAP chart).
+  enabled: true
+
+subscription:
+  package: kubernetes-nmstate-operator
+  channel: stable
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace
+  # Automatic matches the ESO/AAP posture for the homelab cluster.
+  installPlanApproval: Automatic
+
+nmstate:
+  # Creates the single `nmstate` Nmstate CR (operator defaults) which
+  # deploys the nmstate-handler DaemonSet. Set false for operator-only.
+  create: true

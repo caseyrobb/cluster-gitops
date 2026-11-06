@@ -1,0 +1,3 @@
+# ocp (homelab) overlay — Kubernetes NMState.
+# Defaults from the chart are intended; set enabled: false to prune.
+enabled: true

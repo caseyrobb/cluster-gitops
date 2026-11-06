@@ -1,0 +1,72 @@
+{{- if .Values.enabled }}
+{{- if .Values.clusterInitBundle.create }}
+# Idempotent bootstrap so the SecuredCluster on THIS cluster (the one
+# Central runs on) can self-manage: waits for Central, exports a cluster
+# init bundle via the ACS API using the operator-seeded admin password,
+# applies its kubectlBundle, then labels the SecuredCluster to force a
+# reconcile. Exits 0 when secret/sensor-tls already exists, so re-syncs
+# never regenerate the bundle. Adapted from the redhat-cop gitops-catalog
+# instance/base job.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: create-cluster-init-bundle
+  namespace: {{ .Values.namespace.name }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+  labels:
+    app.kubernetes.io/name: stackrox
+    app.kubernetes.io/component: cluster-init
+spec:
+  template:
+    spec:
+      containers:
+        - image: image-registry.openshift-image-registry.svc:5000/openshift/cli:latest
+          name: create-cluster-init-bundle
+          imagePullPolicy: Always
+          env:
+            - name: PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: central-htpasswd
+                  key: password
+          command:
+            - /bin/bash
+            - -c
+            - |
+              #!/usr/bin/env bash
+              if kubectl get secret/sensor-tls &> /dev/null; then
+                echo "cluster-init bundle has already been configured, doing nothing"
+                exit 0
+              else
+                attempt_counter=0
+                max_attempts=20
+                echo "Waiting for central to be available..."
+                until $(curl -k --output /dev/null --silent --head --fail https://{{ .Values.central.name }}); do
+                    if [ ${attempt_counter} -eq ${max_attempts} ];then
+                      echo "Max attempts reached"
+                      exit 1
+                    fi
+                    printf '.'
+                    attempt_counter=$(($attempt_counter+1))
+                    echo "Made attempt $attempt_counter, waiting..."
+                    sleep 5
+                done
+                echo "Configuring cluster-init bundle"
+                export DATA={\"name\":\"{{ .Values.securedCluster.spec.clusterName }}\"}
+                curl -k -o /tmp/bundle.json -X POST -u "admin:$PASSWORD" -H "Content-Type: application/json" --data $DATA https://{{ .Values.central.name }}/v1/cluster-init/init-bundles
+                echo "Bundle received"
+                echo "Applying bundle"
+                # No jq in container, python to the rescue
+                cat /tmp/bundle.json | python3 -c "import sys, json; print(json.load(sys.stdin)['kubectlBundle'])" | base64 -d | oc apply -f -
+                # Touch SecuredCluster to force operator to reconcile
+                oc label SecuredCluster {{ .Values.securedCluster.spec.clusterName }} cluster-init-job-status=created
+                echo "ACS Cluster init bundle generated and applied"
+              fi
+      dnsPolicy: ClusterFirst
+      restartPolicy: Never
+      serviceAccount: create-cluster-init
+      serviceAccountName: create-cluster-init
+      terminationGracePeriodSeconds: 30
+{{- end }}
+{{- end }}

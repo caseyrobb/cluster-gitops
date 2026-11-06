@@ -1,0 +1,23 @@
+{{- if .Values.enabled }}
+{{- if .Values.central.create }}
+apiVersion: platform.stackrox.io/v1alpha1
+kind: Central
+metadata:
+  name: {{ .Values.central.name }}
+  namespace: {{ .Values.namespace.name }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+    # Central CRD is installed by the RHACS operator (OLM), not by Git.
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+  labels:
+    app.kubernetes.io/name: stackrox
+    app.kubernetes.io/component: central
+# Homelab-sized instance following the redhat-cop gitops-catalog reference
+# (resource-reduced, NOT production sizing). Route exposure on the apps
+# wildcard; the operator provisions the stackrox-db PVC (RWO on LVMS is
+# fine — Central is a single pod) and seeds the initial admin password in
+# Secret `central-htpasswd` (key `password`, user `admin`).
+spec:
+  {{- toYaml .Values.central.spec | nindent 2 }}
+{{- end }}
+{{- end }}

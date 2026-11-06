@@ -1,0 +1,53 @@
+{{- if .Values.enabled }}
+{{- if .Values.clusterInitBundle.create }}
+# RBAC for the init-bundle job: manage the bundle secrets and nudge the
+# SecuredCluster so the operator reconciles after the bundle is applied.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: create-cluster-init
+  namespace: {{ .Values.namespace.name }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  labels:
+    app.kubernetes.io/name: stackrox
+    app.kubernetes.io/component: cluster-init
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: create-cluster-init
+  namespace: {{ .Values.namespace.name }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  labels:
+    app.kubernetes.io/name: stackrox
+    app.kubernetes.io/component: cluster-init
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "create", "patch", "update"]
+  - apiGroups: ["platform.stackrox.io"]
+    resources: ["securedclusters"]
+    verbs: ["get", "list", "patch", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: create-cluster-init
+  namespace: {{ .Values.namespace.name }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  labels:
+    app.kubernetes.io/name: stackrox
+    app.kubernetes.io/component: cluster-init
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: create-cluster-init
+subjects:
+  - kind: ServiceAccount
+    name: create-cluster-init
+    namespace: {{ .Values.namespace.name }}
+{{- end }}
+{{- end }}

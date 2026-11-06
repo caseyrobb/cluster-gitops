@@ -1,0 +1,9 @@
+# RHACS Central + self-managing SecuredCluster on the homelab OCP cluster.
+# Central UI: https://central-stackrox.apps.ocp.redcomet.ca (initial admin
+# password: oc -n stackrox get secret central-htpasswd -o jsonpath='{.data.password}' | base64 -d)
+central:
+  create: true
+clusterInitBundle:
+  create: true
+securedCluster:
+  create: true

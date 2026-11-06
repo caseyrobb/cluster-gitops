@@ -8,7 +8,8 @@
 # SecuredCluster on the same cluster).
 #
 # Channel choice: `stable` (cluster default; verified 2026-11-06 resolving to
-# rhacs-operator.v4.0.0). Pin a rhacs-4.x channel here for version control.
+# rhacs-operator.v5.0.0 as of 2026-11-06; the catalog channel head moves —
+# pin a rhacs-4.x/5.x channel + startingCSV for deterministic upgrades.)
 #
 # Master switch for the whole chart. Per-cluster overlays
 # (values/clusters/<cluster>/<chart>.yaml) set this to false to

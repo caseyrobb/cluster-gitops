@@ -3,4 +3,4 @@ name: rhacs-operator
 description: Red Hat Advanced Cluster Security (RHACS/StackRox) Operator for Red Hat OpenShift (OLM Subscription)
 type: application
 version: 0.1.0
-appVersion: "4.0.0"
+appVersion: "5.0.0"

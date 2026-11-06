@@ -1,0 +1,23 @@
+{{- if .Values.enabled }}
+{{- if .Values.hyperconverged.create }}
+apiVersion: hco.kubevirt.io/v1beta1
+kind: HyperConverged
+metadata:
+  # HCO accepts EXACTLY one instance and it must be named 'cluster' and live
+  # in the operator's namespace (enforced by the operator webhook). NOTE: the
+  # upstream COMMUNITY HCO repo pins the name to 'kubevirt-hyperconverged';
+  # the Red Hat OpenShift Virtualization product pins it to 'cluster'. Do not
+  # "fix" this name from upstream docs/CRDs (verified 2026-11-06).
+  name: cluster
+  namespace: {{ .Values.namespace.name }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+  labels:
+    app.kubernetes.io/name: openshift-cnv
+    app.kubernetes.io/component: virt
+# Empty spec = Red Hat defaults. HCO fills the observed spec in status; it
+# does not mutate spec, so selfHeal is safe. Tune live-migration,
+# infraStorage, or resource quotas here deliberately when needed.
+spec: {}
+{{- end }}
+{{- end }}

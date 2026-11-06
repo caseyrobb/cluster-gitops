@@ -1,0 +1,22 @@
+{{- if .Values.enabled }}
+{{- if .Values.operatorGroup.enabled }}
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: openshift-cnv-group
+  namespace: {{ .Values.namespace.name }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  labels:
+    app.kubernetes.io/name: openshift-cnv
+    app.kubernetes.io/component: operator
+# SingleNamespace OG REQUIRED: the kubevirt-hyperconverged stable CSV
+# (verified against the live redhat-operators catalog, v4.22.12) supports
+# ONLY OwnNamespace + SingleNamespace — an empty (cluster-wide) OperatorGroup
+# fails the CSV with UnsupportedOperatorGroup. HyperConverged instances live
+# in this same namespace (Red Hat's standard topology).
+spec:
+  targetNamespaces:
+  - {{ .Values.namespace.name }}
+{{- end }}
+{{- end }}

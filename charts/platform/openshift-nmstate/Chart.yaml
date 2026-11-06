@@ -1,0 +1,6 @@
+apiVersion: v2
+name: openshift-nmstate
+description: Kubernetes NMState Operator for Red Hat OpenShift (OLM Subscription + Nmstate CR)
+type: application
+version: 0.1.0
+appVersion: "4.22.0"

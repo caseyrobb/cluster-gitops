@@ -1,0 +1,13 @@
+{{- if .Values.enabled }}
+{{- if .Values.namespace.create }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.namespace.name }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  labels:
+    app.kubernetes.io/name: openshift-cnv
+    app.kubernetes.io/part-of: openshift-cnv
+{{- end }}
+{{- end }}

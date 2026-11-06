@@ -1,0 +1,18 @@
+{{- if .Values.enabled }}
+{{- if .Values.nmstate.create }}
+apiVersion: nmstate.io/v1
+kind: Nmstate
+metadata:
+  name: nmstate
+  namespace: {{ .Values.namespace.name }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+  labels:
+    app.kubernetes.io/name: openshift-nmstate
+    app.kubernetes.io/component: handler
+# Empty spec = operator defaults (Nmstate DaemonSet on every node, Linux
+# bridge support). NodeNetworkConfigurationPolicy CRs (the actual network
+# configs) are workload-level and deliberately NOT managed here.
+spec: {}
+{{- end }}
+{{- end }}

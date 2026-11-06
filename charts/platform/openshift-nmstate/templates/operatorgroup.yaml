@@ -1,0 +1,21 @@
+{{- if .Values.enabled }}
+{{- if .Values.operatorGroup.enabled }}
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: kubernetes-nmstate-operator
+  namespace: {{ .Values.namespace.name }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  labels:
+    app.kubernetes.io/name: openshift-nmstate
+    app.kubernetes.io/component: operator
+# SingleNamespace OG. The stable CSV (verified against the live
+# redhat-operators catalog) supports OwnNamespace, SingleNamespace and
+# AllNamespaces; MultiNamespace is NOT supported. We pin the operator to its
+# own namespace to match this repo's AAP posture and keep blast radius small.
+spec:
+  targetNamespaces:
+  - {{ .Values.namespace.name }}
+{{- end }}
+{{- end }}

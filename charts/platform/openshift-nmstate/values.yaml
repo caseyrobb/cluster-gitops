@@ -30,6 +30,6 @@ subscription:
   installPlanApproval: Automatic
 
 nmstate:
-  # Creates the single `nmstate` Nmstate CR (operator defaults) which
+  # Creates the single `nmstate` NMState CR (operator defaults) which
   # deploys the nmstate-handler DaemonSet. Set false for operator-only.
   create: true

@@ -21,7 +21,7 @@ spec:
   template:
     spec:
       containers:
-        - image: image-registry.openshift-image-registry.svc:5000/openshift/cli:latest
+        - image: {{ .Values.clusterInitBundle.image }}
           name: create-cluster-init-bundle
           imagePullPolicy: Always
           env:

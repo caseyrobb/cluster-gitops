@@ -55,8 +55,14 @@ central:
 # One-shot bootstrap job + its SA/Role/RoleBinding (wave 2). Idempotent:
 # exits 0 once secret/sensor-tls exists, so later syncs never regenerate
 # the bundle.
+# Image: openshift4/ose-cli (the `oc`/`kubectl`+python3 tooling image,
+# same content the in-cluster `openshift/cli` imagestream points at — used
+# directly because imagestream-tag pulls via image-registry.openshift-image-
+# registry.svc failed to resolve on this cluster 2026-11-06; the node pull
+# secret already carries registry.redhat.io creds for CVO images).
 clusterInitBundle:
   create: false
+  image: registry.redhat.io/openshift4/ose-cli:latest
 
 securedCluster:
   create: false

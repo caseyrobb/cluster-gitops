@@ -82,7 +82,15 @@ def strip_and_tighten(node):
     if node.get("type") == "object" or "properties" in node:
         if "properties" in node:
             node.setdefault("additionalProperties", False)
-        for v in node.get("properties", {}).values():
+        for key, v in node.get("properties", {}).items():
+            if key == "metadata" and isinstance(v, dict) and "properties" in v:
+                # CRD authors sometimes declare a *partial* ObjectMeta (e.g.
+                # HCO pins only metadata.name via an OpenAPI pattern). Forcing
+                # additionalProperties=false there rejects perfectly valid
+                # labels/annotations/namespace. Loosen the metadata subtree
+                # itself, but still validate the fields it does declare
+                # (name pattern enforcement is preserved).
+                v["additionalProperties"] = True
             strip_and_tighten(v)
         if isinstance(node.get("additionalProperties"), dict):
             strip_and_tighten(node["additionalProperties"])

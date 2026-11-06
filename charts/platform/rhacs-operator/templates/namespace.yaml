@@ -1,0 +1,14 @@
+{{- if .Values.enabled }}
+{{- if .Values.namespace.create }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.namespace.name }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+    openshift.io/display-name: Red Hat Advanced Cluster Security Operator
+  labels:
+    app.kubernetes.io/name: rhacs-operator
+    app.kubernetes.io/part-of: rhacs-operator
+{{- end }}
+{{- end }}

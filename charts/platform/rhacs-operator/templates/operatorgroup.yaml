@@ -1,0 +1,20 @@
+{{- if .Values.enabled }}
+{{- if .Values.operatorGroup.enabled }}
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: rhacs-operator
+  namespace: {{ .Values.namespace.name }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  labels:
+    app.kubernetes.io/name: rhacs-operator
+    app.kubernetes.io/component: operator
+# Empty spec = cluster-wide (AllNamespaces) group. REQUIRED: the stable CSV
+# (rhacs-operator.v4.0.0, verified live from the catalog 2026-11-06) supports
+# ONLY the AllNamespaces install mode — a targetNamespaces group makes OLM
+# fail the CSV with UnsupportedOperatorGroup (opposite posture from the
+# SingleNamespace AAP/CNV charts).
+spec: {}
+{{- end }}
+{{- end }}

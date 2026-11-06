@@ -1,3 +1,10 @@
-# AAP operator on the homelab OCP cluster (operator only; no AAP instance CR
-# yet). Overrides would set e.g. subscription.installPlanApproval: Manual
-# plus a pinned startingCSV for production.
+# AAP on the homelab OCP cluster: operator + `aap` instance + `aapmcp`
+# MCP server. Overrides could set e.g. subscription.installPlanApproval:
+# Manual plus a pinned startingCSV for production.
+aap:
+  create: true
+aapmcp:
+  create: true
+  spec:
+    # AAP web route (public_base_url drives MCP tool links back to AAP).
+    public_base_url: https://aap-ansible-automation-platform.apps.ocp.redcomet.ca

@@ -1,0 +1,34 @@
+{{- if .Values.enabled }}
+{{- if .Values.aap.create }}
+apiVersion: aap.ansible.com/v1alpha1
+kind: AnsibleAutomationPlatform
+metadata:
+  # One AAP instance per namespace, same namespace as the operator.
+  # The app.kubernetes.io/* labels are normally written by the aap-operator
+  # (values verified from the live CR 2026-11-06). They are declared here so
+  # ArgoCD sees no live-vs-git drift; the operator keeps them at these values.
+  name: {{ .Values.aap.name }}
+  namespace: {{ .Values.namespace.name }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+    # The AnsibleAutomationPlatform CRD is created by the OLM operator, not
+    # by Git, so the type is unknown to the API server on first sync — skip
+    # the dry-run for missing resource types instead of failing the sync.
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+  labels:
+    app.kubernetes.io/managed-by: aap-operator
+    app.kubernetes.io/name: aap
+    app.kubernetes.io/operator-version: ""
+    app.kubernetes.io/part-of: aap
+# Spec mirrors the live instance exactly (verified 2026-11-06: no admission
+# webhook mutates spec, so selfHeal is safe). Pitfalls encoded here:
+#  - hub.disabled: hub requires ReadWriteMany storage; the LVMS/topolvm
+#    storage on this cluster rejects MULTI_NODE_MULTI_WRITER access modes.
+#  - Do NOT reuse a database PVC across instance recreations: gateway
+#    preference rows are encrypted with the instance SECRET_KEY, and a stale
+#    DB + fresh encryption secret crash-gate the gateway migrations.
+#  - no_log=true hides playbook secrets; keep it on.
+spec:
+  {{- toYaml .Values.aap.spec | nindent 2 }}
+{{- end }}
+{{- end }}

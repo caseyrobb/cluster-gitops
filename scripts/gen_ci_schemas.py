@@ -67,6 +67,11 @@ UPSTREAM_CRD_URLS = [
 # they land in .ci/schemas like the rest.
 SOFT_CLUSTER_CRDS = [
     "hyperconvergeds.hco.kubevirt.io",  # openshift-cnv chart (post-install)
+    # ansible-automation-platform chart instances: CRDs are OLM-created by the
+    # Red Hat operator (product CRDs, no community bootstrap — same rationale
+    # as HCO). Snapshotted from the live cluster once the operator is installed.
+    "ansibleautomationplatforms.aap.ansible.com",
+    "ansiblemcpservers.mcpserver.ansible.com",
 ]
 
 OUT_ROOT = os.path.join(".ci", "schemas")

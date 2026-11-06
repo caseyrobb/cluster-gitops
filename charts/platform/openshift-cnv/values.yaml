@@ -35,7 +35,8 @@ subscription:
   installPlanApproval: Automatic
 
 hyperconverged:
-  # Creates the single HyperConverged CR (must be named 'cluster' in the
-  # operator namespace) which boots virt-api/controller/handler etc.
+  # Creates the single HyperConverged CR in the operator namespace, which
+  # boots virt-api/controller/handler etc. The product CRD pins the name to
+  # 'kubevirt-hyperconverged' (OpenAPI name pattern on the live 4.22 CRD).
   # Set false for operator-only.
   create: true

@@ -1,8 +1,8 @@
 # AAP operator lifecycle is OLM-driven (Subscription from redhat-operators),
 # packaged as a chart per this repo's GitOps convention. Deploying the
-# operator only creates the controller + CRDs; an actual AAP instance is a
-# separate `ansibleautomationplatforms.ansible-automation-platform.io` CR
-# (not created here — decide sizing/HA deliberately when we get there).
+# operator only creates the controller + CRDs; the AAP instance CR and the
+# Ansible MCPServer CR are gated separately below (aap.create /
+# aapmcp.create) so a per-cluster overlay adopts them deliberately.
 #
 # Channel choice: `stable-2.7` is the standard operator. Red Hat also ships
 # `stable-2.7-cluster-scoped` (adds e.g. AWX import features); stay on
@@ -31,3 +31,46 @@ subscription:
   sourceNamespace: openshift-marketplace
   # Automatic matches the ESO chart's posture for the homelab cluster.
   installPlanApproval: Automatic
+
+# --- AAP instance CR (AnsibleAutomationPlatform.aap.ansible.com) ---
+# Mirrors the live `aap` instance verified 2026-11-06. Recreate pitfall:
+# deleting the CR garbage-collects every PVC and aap-* secret (operator GC),
+# and reusing an old database PVC with fresh encryption secrets crash-loops
+# the gateway on undecryptable Preference rows — delete the DB PVC too if
+# recreating without full GC.
+aap:
+  create: false
+  name: aap
+  spec:
+    api:
+      log_level: INFO
+      replicas: 1
+    database:
+      idle_disabled: false
+      postgres_data_volume_init: false
+    gateway_tls_enabled: false
+    gateway_tls_secret_name: ""
+    # hub requires ReadWriteMany; LVMS/topolvm rejects MULTI_NODE_MULTI_WRITER.
+    hub:
+      disabled: true
+    no_log: true
+    redis_mode: standalone
+    route_tls_termination_mechanism: Edge
+
+# --- Ansible MCP server CR (AnsibleMCPServer.mcpserver.ansible.com) ---
+# Inbound auth: operator generates the static bearer token into Secret
+# `aap-gateway-oauth2-token-secret` (key `token`); never commit token values.
+aapmcp:
+  create: false
+  name: aapmcp
+  spec:
+    allow_write_operations: true
+    api:
+      replicas: 1
+    image_pull_policy: IfNotPresent
+    ingress_type: Route
+    no_log: true
+    # CRD-required; the cluster overlay must set the real AAP route URL.
+    public_base_url: ""
+    service_type: ClusterIP
+    set_self_labels: true

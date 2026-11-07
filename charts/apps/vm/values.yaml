@@ -34,4 +34,7 @@ dataVolumes:
     accessModes:
       - ReadWriteOnce
     preallocation: true
+    # Populator path deadlocks http+WFFC on this cluster (see template
+    # comment); false -> legacy import-controller population.
+    usePopulator: false
     httpSourceURL: https://builds.coreos.fedoraproject.org/prod/streams/stable/builds/44.20261023.3.1/x86_64/fedora-coreos-44.20261023.3.1-kubevirt.x86_64.ociarchive

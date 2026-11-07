@@ -9,6 +9,15 @@ metadata:
     # The DataVolume CRD is owned by the CDI operator (installed with
     # OpenShift Virtualization), not by Git.
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+    {{- if not $dv.usePopulator }}
+    # Opt out of the CDI populator path: with the cluster's
+    # HonorWaitForFirstConsumer feature gate (CNV 4.22 default) + topolvm
+    # WaitForFirstConsumer, the populator never creates the importer pod
+    # for HTTP sources (Verified 2026-11-06: DV stuck PendingPopulation,
+    # VIS status empty, silent populator reconcile). The legacy
+    # import-controller path handles http + WFFC correctly.
+    cdi.kubevirt.io/storage.usePopulator: "false"
+    {{- end }}
   labels:
     app.kubernetes.io/name: vm
     app.kubernetes.io/component: bootable-volume

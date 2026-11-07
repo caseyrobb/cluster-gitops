@@ -75,8 +75,14 @@ SOFT_CLUSTER_CRDS = [
     # stackrox chart instances: CRDs installed by the RHACS operator (OLM).
     "centrals.platform.stackrox.io",
     "securedclusters.platform.stackrox.io",
-    # charts/apps/vm DataVolumes: CRD installed by CDI (ships with CNV).
+    # charts/apps/vm DataVolumes + DataSources: CRDs installed by CDI
+    # (ships with CNV). datavolumes kept for when the golden-image backing
+    # DVs move into GitOps alongside their DataSources.
     "datavolumes.cdi.kubevirt.io",
+    "datasources.cdi.kubevirt.io",
+    # charts/apps/vm populator source objects (VolumeImportSource): created
+    # by CDI from a DV source and GC'd after import — Git must own them.
+    "volumeimportsources.cdi.kubevirt.io",
 ]
 
 OUT_ROOT = os.path.join(".ci", "schemas")

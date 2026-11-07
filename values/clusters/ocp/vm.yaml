@@ -1,0 +1,3 @@
+# KubeVirt bootable volumes on the homelab OCP cluster. Chart defaults are
+# the live intent (FCOS 44 kubevirt-optimized image, 10Gi block on LVMS);
+# add per-cluster DataVolume entries here when needed.

@@ -75,6 +75,8 @@ SOFT_CLUSTER_CRDS = [
     # stackrox chart instances: CRDs installed by the RHACS operator (OLM).
     "centrals.platform.stackrox.io",
     "securedclusters.platform.stackrox.io",
+    # charts/apps/vm DataVolumes: CRD installed by CDI (ships with CNV).
+    "datavolumes.cdi.kubevirt.io",
 ]
 
 OUT_ROOT = os.path.join(".ci", "schemas")

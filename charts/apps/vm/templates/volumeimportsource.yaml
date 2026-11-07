@@ -1,0 +1,18 @@
+{{- if .Values.enabled }}
+{{- range $name, $vis := .Values.volumeImportSources }}
+---
+apiVersion: cdi.kubevirt.io/v1beta1
+kind: VolumeImportSource
+metadata:
+  name: {{ $name }}
+  namespace: {{ $.Values.namespace.name }}
+  annotations:
+    # The VolumeImportSource CRD is owned by the CDI operator (installed
+    # with OpenShift Virtualization), not by Git.
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  contentType: {{ $vis.contentType | default "kubevirt" }}
+  source:
+    {{- toYaml $vis.source | nindent 4 }}
+{{- end }}
+{{- end }}

@@ -1,0 +1,27 @@
+{{- if .Values.enabled }}
+{{- range $name, $pvc := .Values.persistentVolumeClaims }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $name }}
+  namespace: {{ $.Values.namespace.name }}
+  labels:
+    {{- toYaml $pvc.labels | nindent 4 }}
+  annotations:
+    {{- toYaml $pvc.annotations | nindent 4 }}
+  # Detach from the imperative DataVolume that originally created this
+  # claim (its controller stamped an ownerReference). SSA cannot clear a
+  # foreign-manager list entry with [] (verified 2026-11-06: the entry
+  # survives an SSA apply), so the workloads ApplicationSet ignores
+  # /metadata/ownerReferences and the live entry is detached once
+  # imperatively after first sync — deleting that DataVolume must not
+  # cascade-delete the golden image. Declaring [] here still yields a
+  # detached PVC when it is recreated from Git; recreation also re-triggers
+  # the populator, re-importing from the VolumeImportSource referenced in
+  # spec.dataSourceRef.
+  ownerReferences: []
+spec:
+  {{- toYaml $pvc.spec | nindent 2 }}
+{{- end }}
+{{- end }}

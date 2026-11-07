@@ -80,6 +80,9 @@ SOFT_CLUSTER_CRDS = [
     # DVs move into GitOps alongside their DataSources.
     "datavolumes.cdi.kubevirt.io",
     "datasources.cdi.kubevirt.io",
+    # charts/apps/vm populator source objects (VolumeImportSource): created
+    # by CDI from a DV source and GC'd after import — Git must own them.
+    "volumeimportsources.cdi.kubevirt.io",
 ]
 
 OUT_ROOT = os.path.join(".ci", "schemas")

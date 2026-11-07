@@ -23,6 +23,24 @@ spec:
     metadata:
       name: '{{.name}}-{{.path.basename}}'
     spec:
+      ignoreDifferences:
+        # spec.volumeName is stamped by the pv binder at first bind and
+        # must NOT live in Git: hard-coding it would break a recreated
+        # golden-image PVC (the PV name would not exist yet). Owned by
+        # another SSA field manager, so ArgoCD cannot clear it — but it
+        # would still flag the PVC OutOfSync without this rule.
+        - group: ""
+          kind: PersistentVolumeClaim
+          jsonPointers:
+            - /spec/volumeName
+            # SSA list semantics: declaring ownerReferences: [] cannot clear
+            # entries owned by another field manager (cdi-controller stamped
+            # one when the PVC was DV-created) — verified 2026-11-06 by SSA
+            # server dry-run: the entry survives the apply. ArgoCD would flag
+            # the PVC OutOfSync forever, so ignore the field; the chart still
+            # declares [] (clean object on recreation) and the live entry is
+            # detached once imperatively after first sync, so deleting the
+            # source DataVolume no longer cascades to the golden PVC.
       project: workloads
       source:
         repoURL: https://github.com/caseyrobb/cluster-gitops.git

@@ -30,3 +30,68 @@ dataSources:
       instancetype.kubevirt.io/default-preference: fedora
       instancetype.kubevirt.io/default-preference-kind: VirtualMachineClusterPreference
       template.kubevirt.io/architecture: amd64
+# VolumeImportSources: the populator source objects (source of truth for
+# the image URL). CDI creates these from a DataVolume's spec.source and
+# GARBAGE-COLLECTS them once the import completes — so Git must carry
+# them or the populator flow is not reproducible. Name must match what
+# PVCs' spec.dataSourceRef references (CDI derives
+# volume-import-source-<dv-uid>); spec mirrored from live DV
+# fedora-coreos-44-amd64 (Verified 2026-11-06).
+volumeImportSources:
+  volume-import-source-a99319d7-2dfd-45f8-bb25-f0f3d2b8de4d:
+    contentType: kubevirt
+    source:
+      http:
+        url: https://builds.coreos.fedoraproject.org/prod/streams/stable/builds/44.20261023.3.1/x86_64/fedora-coreos-44.20261023.3.1-kubevirt.x86_64.ociarchive
+
+# Golden-image PVCs, populated via dataSourceRef -> VolumeImportSource
+# (populator path). Everything the CDI controller/binder stamped is
+# mirrored verbatim so SSA adoption is zero-drift (same technique as the
+# AAP instance adoption); spec.volumeName is the ONE field deliberately
+# absent — it is bind-time-only and hard-coding it would break PVC
+# recreation. ApplicationSet workloads carries a narrow ignoreDifferences
+# for /spec/volumeName. PVC was populated WITHOUT preallocation and WITH
+# bind.immediate — populator + http works fine under those conditions
+# (revises the PR #23 conclusion: the real fix was bind.immediate alone).
+persistentVolumeClaims:
+  fedora-coreos-44-amd64:
+    labels:
+      app: containerized-data-importer
+      app.kubernetes.io/component: storage
+      app.kubernetes.io/managed-by: cdi-controller
+      app.kubernetes.io/part-of: hyperconverged-cluster
+      app.kubernetes.io/version: "4.22.12"
+      instancetype.kubevirt.io/default-preference: fedora
+      instancetype.kubevirt.io/default-preference-kind: VirtualMachineClusterPreference
+    annotations:
+      cdi.kubevirt.io/createdForDataVolume: a99319d7-2dfd-45f8-bb25-f0f3d2b8de4d
+      cdi.kubevirt.io/storage.bind.immediate.requested: "true"
+      cdi.kubevirt.io/storage.condition.running: "false"
+      cdi.kubevirt.io/storage.condition.running.message: Import Complete
+      cdi.kubevirt.io/storage.condition.running.reason: Completed
+      cdi.kubevirt.io/storage.contentType: kubevirt
+      cdi.kubevirt.io/storage.pod.phase: Succeeded
+      cdi.kubevirt.io/storage.pod.restarts: "0"
+      cdi.kubevirt.io/storage.pod.schedulable: "true"
+      cdi.kubevirt.io/storage.populator.progress: 100.0%
+      cdi.kubevirt.io/storage.populator.pvcPrime: prime-98d0d646-c91c-4c9e-9af6-6e78ab4b8b72
+      cdi.kubevirt.io/storage.preallocation.requested: "false"
+      cdi.kubevirt.io/storage.usePopulator: "true"
+      pv.kubernetes.io/bind-completed: "yes"
+      pv.kubernetes.io/bound-by-controller: "yes"
+    spec:
+      accessModes:
+        - ReadWriteOnce
+      dataSource:
+        apiGroup: cdi.kubevirt.io
+        kind: VolumeImportSource
+        name: volume-import-source-a99319d7-2dfd-45f8-bb25-f0f3d2b8de4d
+      dataSourceRef:
+        apiGroup: cdi.kubevirt.io
+        kind: VolumeImportSource
+        name: volume-import-source-a99319d7-2dfd-45f8-bb25-f0f3d2b8de4d
+      resources:
+        requests:
+          storage: "10737418240"
+      storageClassName: lvms-vg1
+      volumeMode: Block

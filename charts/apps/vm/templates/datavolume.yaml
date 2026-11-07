@@ -1,0 +1,37 @@
+{{- if .Values.enabled }}
+{{- range $name, $dv := .Values.dataVolumes }}
+apiVersion: cdi.kubevirt.io/v1beta1
+kind: DataVolume
+metadata:
+  name: {{ $name }}
+  namespace: {{ $.Values.namespace.name }}
+  annotations:
+    # The DataVolume CRD is owned by the CDI operator (installed with
+    # OpenShift Virtualization), not by Git.
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+  labels:
+    app.kubernetes.io/name: vm
+    app.kubernetes.io/component: bootable-volume
+spec:
+  {{- if $dv.preallocation }}
+  # spec-level in the live CRD (NOT under storage), verified against the
+  # installed CDI 2026-11-06. Zeroes the LV up front on thin topolvm.
+  preallocation: true
+  {{- end }}
+  storage:
+    accessModes:
+      {{- toYaml $dv.accessModes | nindent 6 }}
+    resources:
+      requests:
+        storage: {{ $dv.size }}
+    storageClassName: {{ $dv.storageClass }}
+    volumeMode: {{ $dv.volumeMode }}
+  source:
+    http:
+      url: {{ $dv.httpSourceURL }}
+  # No sourceFormat: removed from the DataVolume CRD in modern CDI (the API
+  # server would silently prune it); CDI auto-detects qcow2/raw, which
+  # handles the FCOS -kubevirt.ociarchive disk correctly.
+---
+{{- end }}
+{{- end }}

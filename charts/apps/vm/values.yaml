@@ -6,8 +6,12 @@
 # prune (app stays Synced/Healthy rendering nothing).
 enabled: true
 
+# Destination namespace name only. The chart MUST NOT render a Namespace
+# resource: Namespace is cluster-scoped and the workloads AppProject denies
+# cluster-scoped resources by design (its sync is rejected outright:
+# "resource :Namespace is not permitted in project workloads"). The
+# workloads ApplicationSet's CreateNamespace=true creates/adopts it.
 namespace:
-  create: true
   name: vm
 
 # Bootable DataVolumes, one map entry per volume (DataVolume name = key).

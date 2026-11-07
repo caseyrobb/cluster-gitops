@@ -1,5 +1,5 @@
 # KubeVirt workload chart (workloads ApplicationSet: charts/apps/<name> ->
-# namespace <name>, project: workloads). Renders DataVolumes for bootable
+# namespace <name>, project: workloads). Renders golden-image DataSources
 # disk images pulled via CDI http import.
 #
 # Master switch for the whole chart; per-cluster overlays set false to
@@ -14,30 +14,19 @@ enabled: true
 namespace:
   name: vm
 
-# Bootable DataVolumes, one map entry per volume (DataVolume name = key).
-# FCOS `-kubevirt.` ociarchive images are a tar containing the raw disk;
-# modern CDI auto-detects the format (the old `sourceFormat` field was
-# removed from the CRD and would be silently pruned), no intermediate
-# containerImage step needed.
-#
-# volumeMode: Block is REQUIRED for KubeVirt rootfs disks (a Block-mode
-# DV attaches to a VM; Filesystem-mode works but pays ext4 overhead and
-# topolvm block provisioning is the supported kubevirt path).
-# preallocation: true avoids runtime ENOSPC surprises on the thin pool by
-# zeroing the LV up front (renders at spec level — verified against the
-# installed CDI CRD; under storage it is rejected).
-dataVolumes:
-  fedora-coreos-44:
-    size: 10Gi
-    storageClass: lvms-vg1
-    volumeMode: Block
-    accessModes:
-      - ReadWriteOnce
-    preallocation: true
-    # Populator path deadlocks http+WFFC on this cluster (see template
-    # comment); false -> legacy import-controller population.
-    usePopulator: false
-    # Required with HonorWaitForFirstConsumer on this cluster or the
-    # import never starts for a volume with no consuming pod (see template).
-    bindImmediate: true
-    httpSourceURL: https://builds.coreos.fedoraproject.org/prod/streams/stable/builds/44.20261023.3.1/x86_64/fedora-coreos-44.20261023.3.1-kubevirt.x86_64.ociarchive
+# Golden-image pattern (like openshift-virtualization-os-images): a
+# DataSource names the populated PVC so VMs consume it via
+# dataSourceRef, and its labels drive default instancetype/preference
+# selection. The backing DataVolume is managed outside this chart for
+# now (imperative in-cluster); if it moves into GitOps, re-add a
+# datavolume template alongside so the whole pipeline is Git-owned.
+dataSources:
+  fedora-coreos-44-amd64:
+    source:
+      pvc:
+        name: fedora-coreos-44-amd64
+        namespace: vm
+    labels:
+      instancetype.kubevirt.io/default-preference: fedora
+      instancetype.kubevirt.io/default-preference-kind: VirtualMachineClusterPreference
+      template.kubevirt.io/architecture: amd64

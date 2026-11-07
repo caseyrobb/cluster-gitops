@@ -1,0 +1,21 @@
+{{- if .Values.enabled }}
+{{- range $name, $ds := .Values.dataSources }}
+---
+apiVersion: cdi.kubevirt.io/v1beta1
+kind: DataSource
+metadata:
+  name: {{ $name }}
+  namespace: {{ $.Values.namespace.name }}
+  {{- with $ds.labels }}
+  labels:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  annotations:
+    # The DataSource CRD is owned by the CDI operator (installed with
+    # OpenShift Virtualization), not by Git.
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  source:
+    {{- toYaml $ds.source | nindent 4 }}
+{{- end }}
+{{- end }}

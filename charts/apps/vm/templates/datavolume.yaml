@@ -9,6 +9,15 @@ metadata:
     # The DataVolume CRD is owned by the CDI operator (installed with
     # OpenShift Virtualization), not by Git.
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+    {{- if $dv.bindImmediate }}
+    # The cluster's HonorWaitForFirstConsumer CDI feature gate makes CDI
+    # (both populator AND legacy import paths) defer the importer pod
+    # until a consumer pod claims the PVC (Verified 2026-11-06: standalone
+    # boot volume sits in WaitForFirstConsumer forever). Force Immediate
+    # binding so the import runs now — same trick the
+    # openshift-virtualization-os-images golden-image DataVolumes use.
+    cdi.kubevirt.io/storage.bind.immediate.requested: "true"
+    {{- end }}
     {{- if not $dv.usePopulator }}
     # Opt out of the CDI populator path: with the cluster's
     # HonorWaitForFirstConsumer feature gate (CNV 4.22 default) + topolvm

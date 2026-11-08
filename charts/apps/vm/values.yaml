@@ -71,7 +71,13 @@ dataVolumes:
         requests:
           storage: "10737418240"
       storageClassName: lvms-vg1
-      volumeMode: Block
+      # MUST be Filesystem for contentType archive: the importer extracts
+      # the tar with /usr/bin/tar into a mounted filesystem (a Block
+      # target makes tar exit 2 against the raw device instantly).
+      # KubeVirt consumes filesystem-mode DV/DataSource volumes natively
+      # by reading disk.img inside the FS (the standard golden-image
+      # pattern; same layout the CDI 'kubevirt' contentType produces).
+      volumeMode: Filesystem
 
 persistentVolumeClaims:
   # Blank data disk for the pangolin-test VM (no dataSource -> plain PVC).

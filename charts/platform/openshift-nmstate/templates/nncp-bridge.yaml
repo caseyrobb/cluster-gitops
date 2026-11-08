@@ -28,7 +28,10 @@ spec:
         bridge:
           options:
             # STP off: required so VMs can live migrate between nodes.
-            stp: false
+            # nmstate 2.x wants stp as a struct ({enabled: false}); the
+            # legacy boolean form fails with "expected struct LinuxBridge..."
+            stp:
+              enabled: false
           port:
             {{- range $nic := $bridge.nics }}
             - name: {{ $nic }}

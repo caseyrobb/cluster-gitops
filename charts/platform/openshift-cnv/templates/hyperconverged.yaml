@@ -23,6 +23,16 @@ metadata:
 # Empty spec = Red Hat defaults. HCO fills the observed spec in status; it
 # does not mutate spec, so selfHeal is safe. Tune live-migration,
 # infraStorage, or resource quotas here deliberately when needed.
-spec: {}
+spec:
+  {{- if .Values.hyperconverged.networkBinding }}
+  # Binding plugins are registered cluster-wide here; VM interfaces then
+  # reference them by name (e.g. macvlan -> managedTap, the OCP-supported
+  # combo for macvlan NADs: the legacy bridge binding leaves the CNI
+  # macvlan child unenslaved and the VM has no uplink).
+  networkBinding:
+    {{- toYaml .Values.hyperconverged.networkBinding | nindent 4 }}
+  {{- else }}
+  {}
+  {{- end }}
 {{- end }}
 {{- end }}

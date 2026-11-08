@@ -83,6 +83,13 @@ SOFT_CLUSTER_CRDS = [
     # charts/apps/vm populator source objects (VolumeImportSource): created
     # by CDI from a DV source and GC'd after import — Git must own them.
     "volumeimportsources.cdi.kubevirt.io",
+    # charts/apps/vm VirtualMachines: CRD created by the OpenShift
+    # Virtualization operator (OLM), product-specific.
+    "virtualmachines.kubevirt.io",
+    # charts/apps/vm ExternalSecrets: CRD created by the RH ESO operator.
+    "externalsecrets.external-secrets.io",
+    # charts/apps/vm NADs: CRD created by cluster Multus.
+    "network-attachment-definitions.k8s.cni.cncf.io",
 ]
 
 OUT_ROOT = os.path.join(".ci", "schemas")

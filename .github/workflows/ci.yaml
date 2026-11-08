@@ -159,3 +159,35 @@ jobs:
           fi
         env:
           MATRIX_CHART: ${{ matrix.chart }}
+
+  butane:
+    name: butane (ignition)
+    runs-on: ubuntu-24.04-aarch64
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install butane
+        run: |
+          set -euo pipefail
+          VER=0.23.0
+          curl -fsSL -o /tmp/butane \
+            "https://github.com/coreos/butane/releases/download/v${VER}/butane-aarch64-unknown-linux-gnu"
+          chmod +x /tmp/butane
+          /tmp/butane --version
+
+      # Every .bnt under charts/**/ignition/ must transpile under --strict.
+      # Rendered Ignition is NOT stored in Git (it goes to Vault and lands
+      # in-cluster via ExternalSecret) — this gate keeps Git compilable.
+      - name: Compile all butane configs (strict)
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          n=0
+          for bnt in charts/apps/*/ignition/*.bnt; do
+            echo "::group::compile $bnt"
+            /tmp/butane --strict "$bnt" | jq -e '.ignition.version' >/dev/null
+            echo "ok: $bnt"
+            echo "::endgroup::"
+            n=$((n + 1))
+          done
+          echo "compiled $n butane config(s)"

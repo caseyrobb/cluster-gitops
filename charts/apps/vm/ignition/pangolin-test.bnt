@@ -1,0 +1,201 @@
+# Pangolin server VM — Fedora CoreOS butane config (rendered to Ignition
+# and stored in Vault; the VM consumes it via cloudInitNoCloud).
+#
+# Bootstraps the pangolin Community Edition stack (app + gerbil + traefik,
+# embedded SQLite) as a podman quadlet pod. All state lives on the second
+# (data) disk: formatted once on first boot at /opt/pangolin, survives VM
+# re-creation. Pangolin secrets arrive at runtime from the k8s Secret
+# (Vault -> ESO) that KubeVirt mounts via virtiofs at /run/secrets/pangolin
+# — nothing secret is ever written to the disk image.
+#
+# Network: the VM's second NIC (macvlan NAD on the OCP node's br-ex) is
+# statically addressed 172.16.0.95/22 via NetworkManager keyfile; the
+# masquerade (pod-network) NIC keeps the default route for VM egress, and
+# LAN responses ride the connected route.
+variant: fcos
+version: 1.5.0
+passwd:
+  users:
+    - name: fedora
+      ssh_authorized_keys:
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIO20GVqdsyeREE+UJD1JwAxUyg2Jt7XeNNTB7YQXSFjw carobb@zeta
+      groups:
+        - wheel
+        - sudo
+        - docker
+systemd:
+  units:
+    - name: run-secrets-pangolin.mount
+      enabled: true
+    - name: pangolin-pod.service
+      enabled: true
+    - name: opt-pangolin.mount
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Pangolin data disk (second virtio disk)
+        [Mount]
+        What=/dev/disk/by-label/pangolin
+        Where=/opt/pangolin
+        Type=xfs
+        Options=defaults
+        [Install]
+        WantedBy=multi-user.target
+storage:
+  disks:
+    # Data disk (VM second virtio disk). wipeTable false + no-op when the
+    # filesystem already exists: idempotent across VM re-creations.
+    - device: /dev/vdb
+      wipe_table: false
+      partitions:
+        - label: pangolin-data
+          number: 1
+  filesystems:
+    # Created only if absent (mkfs is a no-op when the xfs is already
+    # there) — idempotent across VM re-creations. Mounted persistently by
+    # the opt-pangolin.mount unit below.
+    - device: /dev/vdb1
+      format: xfs
+      label: pangolin    # xfs labels cap at 12 chars
+      wipe_filesystem: false
+  directories:
+    - path: /run/secrets/pangolin
+      mode: 0755
+  files:
+    # ---- quadlet pod -------------------------------------------------------
+    - path: /etc/containers/systemd/pangolin.pod
+      mode: 0644
+      contents:
+        inline: |
+          # pangolin CE stack (mirrors fosrl/pangolin compose.example.yaml)
+          # All containers share one netns (== compose network_mode:
+          # service:gerbil); traefik's 80/443 and gerbil's UDP tunnel ports
+          # are published on the VM itself.
+          [Pod]
+          PodName=pangolin
+          PublishPort=80:80
+          PublishPort=443:443
+          PublishPort=51820:51820/udp
+          PublishPort=21820:21820/udp
+          AddCapability=NET_ADMIN
+          AddCapability=SYS_MODULE
+          RestartPolicy=always
+          [Service]
+          Requires=run-secrets-pangolin.mount
+          After=run-secrets-pangolin.mount
+    - path: /etc/containers/systemd/pangolin.container
+      mode: 0644
+      contents:
+        inline: |
+          [Container]
+          Pod=pangolin.pod
+          Image=docker.io/fosrl/pangolin:1.26.0
+          Volume=/opt/pangolin/config:/app/config:Z
+          EnvironmentFile=/run/secrets/pangolin/pangolin.env
+          HealthCmd=curl -f http://localhost:3001/api/v1/
+          HealthInterval=10s
+          HealthTimeout=5s
+          HealthRetries=30
+          HealthStartPeriod=90s
+    - path: /etc/containers/systemd/gerbil.container
+      mode: 0644
+      contents:
+        inline: |
+          [Container]
+          Pod=pangolin.pod
+          Image=docker.io/fosrl/gerbil:1.6.0
+          Volume=/opt/pangolin/config:/var/config:Z
+          Exec=--reachableAt=http://gerbil:3004
+          Exec=--generateAndSaveKeyTo=/var/config/key
+          Exec=--remoteConfig=http://pangolin:3001/api/v1/
+          [Service]
+          After=pangolin-container.service
+    - path: /etc/containers/systemd/traefik.container
+      mode: 0644
+      contents:
+        inline: |
+          [Container]
+          Pod=pangolin.pod
+          Image=docker.io/library/traefik:v3.7
+          # Podman docker-compatible socket (see podman-docker.socket) —
+          # the Traefik docker provider discovers pangolin's dynamic route
+          # labels through it.
+          Environment=DOCKER_HOST=unix:///var/run/docker.sock
+          Volume=/run/podman/docker.sock:/var/run/docker.sock:Z
+          Volume=/opt/pangolin/config/traefik:/etc/traefik:ro,Z
+          Volume=/opt/pangolin/config/letsencrypt:/letsencrypt:Z
+          Exec=--configFile=/etc/traefik/traefik_config.yml
+          [Service]
+          After=pangolin-container.service
+    - path: /etc/containers/systemd/newt.container
+      mode: 0644
+      contents:
+        inline: |
+          [Container]
+          # NEWT_MODE=tunnel is a client: it dials OUT to the pangolin/
+          # gerbil wireguard endpoint and publishes its local service over
+          # that tunnel, so it needs no inbound ports. Its env (tunnel id/
+          # secret, target host+port) comes from the same Vault-backed
+          # secret volume.
+          Image=docker.io/fosrl/newt:1.20.0
+          NetworkMode=host
+          EnvironmentFile=/run/secrets/pangolin/newt.env
+          [Service]
+          After=pangolin-container.service
+    # ---- traefik plumbing: podman docker-compatible API + config ---------
+    - path: /etc/containers/systemd/podman-docker.socket
+      mode: 0644
+      contents:
+        inline: |
+          [Socket]
+          ListenStream=/run/podman/docker.sock
+          [Install]
+          WantedBy=sockets.target
+    - path: /opt/pangolin/config/traefik/traefik_config.yml
+      mode: 0644
+      overwrite: false
+      contents:
+        inline: |
+          entryPoints:
+            web:
+              address: ":80"
+            websecure:
+              address: ":443"
+          providers:
+            docker:
+              endpoint: "unix:///var/run/docker.sock"
+              network: pangolin-net
+              exposedByDefault: false
+          api:
+            dashboard: false
+    # ---- virtiofs mount of the ESO-fed secret volume ----------------------
+    - path: /etc/systemd/system/run-secrets-pangolin.mount
+      mode: 0644
+      contents:
+        inline: |
+          [Unit]
+          Description=Pangolin env (KubeVirt secret volume via virtiofs)
+          [Mount]
+          What=pangolin-env
+          Where=/run/secrets/pangolin
+          Type=virtiofs
+          Options=ro
+          [Install]
+          WantedBy=multi-user.target
+    # ---- static LAN address on the macvlan NIC -----------------------------
+    # NIC order follows VM spec: enp1s0=masquerade (pod net), enp2s0=lan0.
+    - path: /etc/NetworkManager/system-connections/pangolin-lan.nmconnection
+      mode: 0600
+      contents:
+        inline: |
+          [connection]
+          id=pangolin-lan
+          type=ethernet
+          interface-name=enp2s0
+          [ipv4]
+          method=manual
+          address1=172.16.0.95/22,172.16.0.1
+          dns=172.16.0.1
+          may-fail=false
+          [ipv6]
+          method=disabled

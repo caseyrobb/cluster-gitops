@@ -122,6 +122,10 @@ vms:
     # LiveMigrate over node eviction; if CSI snapshot-based hotplug
     # migration misbehaves on LVMS, switch to DoNotEvict in the overlay.
     evictionStrategy: LiveMigrate
+    bootloader:
+      kernelArguments:
+        - name: ignition.platform.id
+          value: openstack
     networks:
       lanEnabled: true
       lanNad: lan0

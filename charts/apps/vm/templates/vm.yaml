@@ -28,6 +28,20 @@ spec:
           cores: {{ $vm.cpu }}
         memory:
           guest: {{ $vm.memory }}
+        {{- with $vm.bootloader }}
+        # NOTE: OpenShift CNV places kernelArguments under
+        # domain.firmware.bootloader (upstream KubeVirt uses domain.bootloader).
+        # FCOS's Ignition only probes the OpenStack ConfigDrive datasource
+        # when told to via ignition.platform.id; without it the
+        # perfectly-built config-2 ISO is ignored ("no config provided").
+        firmware:
+          bootloader:
+            kernelArguments:
+              {{- range .kernelArguments }}
+              - name: {{ .name }}
+                value: {{ .value | quote }}
+              {{- end }}
+        {{- end }}
         devices:
           disks:
             - name: rootdisk

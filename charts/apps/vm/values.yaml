@@ -135,6 +135,11 @@ vms:
     evictionStrategy: LiveMigrate
     networks:
       lanNad: lan0
+    # Locally-administered unicast (02:), documented in the .bnt keyfile —
+    # keep in sync with [ethernet] mac-address there.
+    macAddresses:
+      default: "02:1a:11:00:00:01"
+      lan: "02:1a:11:00:00:02"
     rootDisk:
       # Golden image cloned per-VM from this DataSource (RWO clone).
       dataSource: fedora-coreos-44-amd64
@@ -151,18 +156,22 @@ vms:
     secretVolumes:
       # Mounted via virtiofs at /run/secrets/<name> by the guest ignition.
       - pangolin-env
+    # One ExternalSecret per name; each may carry multiple Vault keys into
+    # the SAME Secret (one list entry per name — two list entries with the
+    # same name would render two same-named ES objects, last-wins, and one
+    # Vault key would silently never reach the Secret).
     externalSecrets:
       - name: pangolin-test-ignition
-        vaultPath: vm/pangolin-test
-        property: ignition
-        secretKey: userData
+        data:
+          - vaultPath: vm/pangolin-test
+            property: ignition
+            secretKey: userData
       - name: pangolin-env
-        vaultPath: vm/pangolin-test
-        property: pangolin-env
-        secretKey: pangolin.env
-      # Same Secret object, second data entry: newt tunnel env
-      # (NEWT_MODE=tunnel client variables).
-      - name: pangolin-env
-        vaultPath: vm/pangolin-test
-        property: newt-env
-        secretKey: newt.env
+        data:
+          - vaultPath: vm/pangolin-test
+            property: pangolin-env
+            secretKey: pangolin.env
+          # newt tunnel env (NEWT_MODE=tunnel client variables).
+          - vaultPath: vm/pangolin-test
+            property: newt-env
+            secretKey: newt.env

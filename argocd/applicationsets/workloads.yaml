@@ -24,6 +24,19 @@ spec:
       name: '{{.name}}-{{.path.basename}}'
     spec:
       ignoreDifferences:
+        # KubeVirt mutating webhook stamps defaults onto the VM template
+        # (pci-topology annotation, architecture, MAC addresses, firmware
+        # serial/uuid, machine type, resources {}) — Git never declares
+        # them, Argo would show permanent OutOfSync.
+        - group: kubevirt.io
+          kind: VirtualMachine
+          jsonPointers:
+            - /spec/template/metadata/annotations
+            - /spec/template/spec/architecture
+            - /spec/template/spec/domain/devices/interfaces
+            - /spec/template/spec/domain/firmware
+            - /spec/template/spec/domain/machine
+            - /spec/template/spec/domain/resources
         # spec.volumeName is stamped by the pv binder at first bind and
         # must NOT live in Git: hard-coding it would break a recreated
         # golden-image PVC (the PV name would not exist yet). Owned by

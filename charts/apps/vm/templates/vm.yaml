@@ -97,7 +97,18 @@ spec:
     # disk PVC.
     - metadata:
         name: {{ $name }}-root
+        annotations:
+          # LVMS is WaitForFirstConsumer; the populator clone deadlocks
+          # ('waiting for first consumer') without bind.immediate — same
+          # lesson as the golden DV (PR #24), now proven on the clone path.
+          cdi.kubevirt.io/storage.bind.immediate.requested: "true"
       spec:
+        # Must MATCH the golden DataSource's contentType (archive), and
+        # CDI forbids Block volumeMode for archive (verified live:
+        # 'Source contentType (archive) and target contentType (kubevirt)
+        # do not match', then 'ContentType Archive cannot have block
+        # volumeMode'). The clone is an FS copy carrying disk.img.
+        contentType: {{ $vm.rootDisk.contentType | default "archive" }}
         storage:
           accessModes:
             - ReadWriteOnce
@@ -105,7 +116,7 @@ spec:
             requests:
               storage: {{ $vm.rootDisk.size }}
           storageClassName: {{ $.Values.storageClass }}
-          volumeMode: Block
+          volumeMode: Filesystem
         # Embedded-DV-schema sourceRef: kind/name/namespace only — no
         # apiGroup (verified against the product VM CRD; the standalone
         # DataVolume CRD's dataSourceRef does not apply here).

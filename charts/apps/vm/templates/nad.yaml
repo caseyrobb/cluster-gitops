@@ -10,15 +10,21 @@ metadata:
   annotations:
     # NAD CRD is created by the cluster (Multus), not by Git.
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+    # Schedule VMs only onto nodes where the nmstate NNCP brought this
+    # bridge up (kubevirt node plugin advertises the resource).
+    k8s.v1.cni.cncf.io/resourceName: bridge.network.kubevirt.io/{{ .bridgeName }}
   labels:
     app.kubernetes.io/name: {{ $.Chart.Name }}
 spec:
-  # L2 attachment for VMs: macvlan children on the OCP node's br-ex.
-  # (The physical uplink is enslaved to OVS in OVN-K OVN mode — macvlan on
-  # the NIC itself fails "device or resource busy"; br-ex works — verified
-  # 2026-11-06 with a multus test pod.) Guests set their own static
-  # addresses (see the butane NM keyfile), so no IPAM block is needed.
-  config: '{"cniVersion":"0.4.0","name":"{{ .lanNadName }}","type":"macvlan","master":"{{ .macvlanMaster }}","mode":"{{ .mode }}"}'
+  # L2 attachment for VMs: cnv-bridge (OCP's bridge CNI fork) joins the
+  # existing node-local linux bridge created by the nmstate NNCP in
+  # charts/platform/openshift-nmstate (br-vm on the physically free NIC).
+  # disableContainerInterface: the bridge port is consumed directly by the
+  # VM instead of a container veth — the CNV VM-on-LAN requirement.
+  # Guests set their own static addresses (see the butane NM keyfile), so
+  # no IPAM block is needed.
+  config: '{"cniVersion":"0.3.1","name":"{{ .lanNadName }}","type":"cnv-bridge","bridge":"{{ .bridgeName }}","macspoofchk":false,"disableContainerInterface":true}'
+{{- end }}
 {{- end }}
 {{- end }}
 {{- end }}

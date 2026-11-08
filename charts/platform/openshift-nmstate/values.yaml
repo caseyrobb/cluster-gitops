@@ -33,3 +33,8 @@ nmstate:
   # Creates the single `nmstate` NMState CR (operator defaults) which
   # deploys the nmstate-handler DaemonSet. Set false for operator-only.
   create: true
+
+# Node-local linux bridges (map: bridge name -> {nics: [...], nodeSelector?}).
+# Only for VM L2 attachment (see templates/nncp-bridge.yaml); keep the
+# OVN-K uplink out of these.
+linuxBridges: {}

@@ -46,6 +46,25 @@ spec:
           kind: PersistentVolumeClaim
           jsonPointers:
             - /spec/volumeName
+            # CDI runtime stamps mutate on every fresh import (prime name,
+            # progress, pod state) and pv.* bind stamps arrive at bind
+            # time; the chart declares only the stable behavioral ones
+            # (bind.immediate, usePopulator). Ignored so re-imports don't
+            # pin the PVC permanently OutOfSync (golden-image rework
+            # 2026-11-08).
+            - /metadata/annotations/cdi.kubevirt.io~1createdForDataVolume
+            - /metadata/annotations/cdi.kubevirt.io~1storage.condition.running
+            - /metadata/annotations/cdi.kubevirt.io~1storage.condition.running.message
+            - /metadata/annotations/cdi.kubevirt.io~1storage.condition.running.reason
+            - /metadata/annotations/cdi.kubevirt.io~1storage.contentType
+            - /metadata/annotations/cdi.kubevirt.io~1storage.pod.phase
+            - /metadata/annotations/cdi.kubevirt.io~1storage.pod.restarts
+            - /metadata/annotations/cdi.kubevirt.io~1storage.pod.schedulable
+            - /metadata/annotations/cdi.kubevirt.io~1storage.populator.progress
+            - /metadata/annotations/cdi.kubevirt.io~1storage.populator.pvcPrime
+            - /metadata/annotations/cdi.kubevirt.io~1storage.preallocation.requested
+            - /metadata/annotations/pv.kubernetes.io~1bind-completed
+            - /metadata/annotations/pv.kubernetes.io~1bound-by-controller
             # SSA list semantics: declaring ownerReferences: [] cannot clear
             # entries owned by another field manager (cdi-controller stamped
             # one when the PVC was DV-created) — verified 2026-11-06 by SSA

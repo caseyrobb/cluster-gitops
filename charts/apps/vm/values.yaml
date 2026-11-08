@@ -38,11 +38,18 @@ dataSources:
 # volume-import-source-<dv-uid>); spec mirrored from live DV
 # fedora-coreos-44-amd64 (Verified 2026-11-06).
 volumeImportSources:
+  # IMPORTANT: import the *raw* metal disk with contentType 'data'.
+  # The -kubevirt.ociarchive is a container-image tar wrapper, NOT a
+  # disk image; importing it (contentType kubevirt) produced a PVC full
+  # of OCI-layout bytes -> SeaBIOS 'Boot failed: not a bootable disk'
+  # (proven via VNC console on pangolin-test, 2026-11-08). The metal
+  # raw.xz is the BIOS+UEFI bootable disk; CDI transparently
+  # decompresses .xz for contentType data.
   volume-import-source-a99319d7-2dfd-45f8-bb25-f0f3d2b8de4d:
-    contentType: kubevirt
+    contentType: data
     source:
       http:
-        url: https://builds.coreos.fedoraproject.org/prod/streams/stable/builds/44.20261023.3.1/x86_64/fedora-coreos-44.20261023.3.1-kubevirt.x86_64.ociarchive
+        url: https://builds.coreos.fedoraproject.org/prod/streams/stable/builds/44.20261023.3.1/x86_64/fedora-coreos-44.20261023.3.1-metal.x86_64.raw.xz
 
 # Golden-image PVCs, populated via dataSourceRef -> VolumeImportSource
 # (populator path). Everything the CDI controller/binder stamped is
@@ -64,21 +71,8 @@ persistentVolumeClaims:
       instancetype.kubevirt.io/default-preference: fedora
       instancetype.kubevirt.io/default-preference-kind: VirtualMachineClusterPreference
     annotations:
-      cdi.kubevirt.io/createdForDataVolume: a99319d7-2dfd-45f8-bb25-f0f3d2b8de4d
       cdi.kubevirt.io/storage.bind.immediate.requested: "true"
-      cdi.kubevirt.io/storage.condition.running: "false"
-      cdi.kubevirt.io/storage.condition.running.message: Import Complete
-      cdi.kubevirt.io/storage.condition.running.reason: Completed
-      cdi.kubevirt.io/storage.contentType: kubevirt
-      cdi.kubevirt.io/storage.pod.phase: Succeeded
-      cdi.kubevirt.io/storage.pod.restarts: "0"
-      cdi.kubevirt.io/storage.pod.schedulable: "true"
-      cdi.kubevirt.io/storage.populator.progress: 100.0%
-      cdi.kubevirt.io/storage.populator.pvcPrime: prime-98d0d646-c91c-4c9e-9af6-6e78ab4b8b72
-      cdi.kubevirt.io/storage.preallocation.requested: "false"
       cdi.kubevirt.io/storage.usePopulator: "true"
-      pv.kubernetes.io/bind-completed: "yes"
-      pv.kubernetes.io/bound-by-controller: "yes"
     spec:
       accessModes:
         - ReadWriteOnce

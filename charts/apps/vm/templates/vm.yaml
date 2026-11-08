@@ -88,7 +88,12 @@ spec:
             secretName: {{ $sv }}
         {{- end }}
         - name: cloudinit
-          cloudInitNoCloud:
+          # ConfigDrive, not NoCloud: Ignition does not implement the
+          # NoCloud datasource (that is cloud-init only). FCOS auto-detects
+          # the ConfigDrive volume (label CONFIG) via its openstack
+          # platform. Proven live: a correct cidata-labeled NoCloud ISO
+          # (user-data + meta-data) was ignored -- "no config provided".
+          cloudInitConfigDrive:
             secretRef:
               name: {{ $vm.cloudInit.secretName }}
   dataVolumeTemplates:

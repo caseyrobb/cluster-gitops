@@ -1,0 +1,43 @@
+{{- if .Values.enabled }}
+{{- range $name, $bridge := .Values.linuxBridges }}
+---
+# Node-local (non-OVS) linux bridge for OpenShift Virtualization L2 LAN
+# attachment. The NIC listed here must be physically free (NOT the OVN-K
+# uplink enslaved to br-ex). VMs reach the LAN via a cnv-bridge NAD on this
+# bridge; kubevirt's node plugin advertises bridge.network.kubevirt.io/<name>.
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: {{ $name }}
+  annotations:
+    # The NMState CRDs are created by the operator, not by Git.
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+  labels:
+    app.kubernetes.io/name: {{ $.Chart.Name }}
+    app.kubernetes.io/instance: {{ $name }}
+spec:
+  {{- with $bridge.nodeSelector }}
+  nodeSelector:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  desiredState:
+    interfaces:
+      - name: {{ $name }}
+        type: linux-bridge
+        state: up
+        bridge:
+          options:
+            # STP off: required so VMs can live migrate between nodes.
+            stp: false
+          port:
+            {{- range $nic := $bridge.nics }}
+            - name: {{ $nic }}
+            {{- end }}
+        # Bridge is L2-only for VM traffic; the nodes keep their addressing
+        # on the OVN-K uplink, so no IP here.
+        ipv4:
+          enabled: false
+        ipv6:
+          enabled: false
+{{- end }}
+{{- end }}

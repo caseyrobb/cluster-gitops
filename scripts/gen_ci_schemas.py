@@ -90,6 +90,9 @@ SOFT_CLUSTER_CRDS = [
     "externalsecrets.external-secrets.io",
     # charts/apps/vm NADs: CRD created by cluster Multus.
     "network-attachment-definitions.k8s.cni.cncf.io",
+    # charts/platform/openshift-nmstate NNCPs: CRD created by the NMState
+    # operator (OLM), product-specific.
+    "nodenetworkconfigurationpolicies.nmstate.io",
 ]
 
 OUT_ROOT = os.path.join(".ci", "schemas")

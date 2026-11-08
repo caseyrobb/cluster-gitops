@@ -1,3 +1,9 @@
 # ocp (homelab) overlay — Kubernetes NMState.
 # Defaults from the chart are intended; set enabled: false to prune.
 enabled: true
+# VM L2 LAN bridge on the physically free NIC (enp4s0; the OVN-K uplink is
+# enp5s0f0 -> br-ex on this hardware — verified live 2026-11-08).
+linuxBridges:
+  br-vm:
+    nics:
+      - enp4s0

@@ -120,16 +120,13 @@ secretStore:
 # LAN (OVN-K OVN mode enslaves the physical NIC to OVS; br-ex is the
 # working master — verified 2026-11-06).
 network:
-  # macvlan LAN attachment is disabled until the OCP node networking for
-  # VM-on-LAN is settled (OVN-K OVN mode: multus creates the macvlan child
-  # but no kubevirt binding enslaves it to the tap bridge; the supported
-  # paths are a CNV linux-bridge NNCP on a dedicated NIC, or the kubevirt
-  # macvtap device plugin). VMs run on the masquerade pod network with
-  # declared interface ports + NodePort Service meanwhile.
-  enabled: false
+  # VM LAN path: node-local linux bridge (nmstate NNCP br-vm on the free
+  # NIC — see charts/platform/openshift-nmstate ocp overlay) + cnv-bridge
+  # NAD. macvlan-on-br-ex was proven non-functional for VMs on OVN-K OVN
+  # mode (multus macvlan child never enslaved to the kubevirt tap bridge).
+  enabled: true
   lanNadName: lan0
-  macvlanMaster: br-ex
-  mode: bridge
+  bridgeName: br-vm
 
 # VirtualMachines, one map entry per VM (key = VM name).
 vms:
@@ -141,12 +138,12 @@ vms:
     # migration misbehaves on LVMS, switch to DoNotEvict in the overlay.
     evictionStrategy: LiveMigrate
     networks:
-      # Set true once the node-side LAN bridge exists (see network.enabled).
-      lanEnabled: false
+      lanEnabled: true
       lanNad: lan0
-      # Binding plugin registered in the HyperConverged CR
-      # (platform/openshift-cnv overlay: macvlan -> managedTap).
-      lanBinding: macvlan
+      # cnv-bridge NAD uses kubevirt's legacy bridge binding; the named
+      # macvlan/managedTap registration (openshift-cnv overlay) stays
+      # registered but unused — set for macvlan-type NADs only.
+      lanBinding: ""
     # Locally-administered unicast (02:), documented in the .bnt keyfile —
     # keep in sync with [ethernet] mac-address there.
     macAddresses:

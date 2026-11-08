@@ -183,7 +183,10 @@ storage:
           [Install]
           WantedBy=multi-user.target
     # ---- static LAN address on the macvlan NIC -----------------------------
-    # NIC order follows VM spec: enp1s0=masquerade (pod net), enp2s0=lan0.
+    # Bound by MAC (02:1a:11:00:00:02 = lan0, declared in the VM spec via
+    # values.macAddresses) instead of by PCI-derived name: kubevirt places
+    # NICs on consecutive slots and the name (enp2s0/enp3s0) is an
+    # enumeration accident. The masquerade NIC is left to DHCP.
     - path: /etc/NetworkManager/system-connections/pangolin-lan.nmconnection
       mode: 0600
       contents:
@@ -191,11 +194,14 @@ storage:
           [connection]
           id=pangolin-lan
           type=ethernet
-          interface-name=enp2s0
+          [ethernet]
+          mac-address=02:1A:11:00:00:02
           [ipv4]
           method=manual
           address1=172.16.0.95/22,172.16.0.1
           dns=172.16.0.1
           may-fail=false
+          [ipv6]
+          method=ignore
           [ipv6]
           method=disabled

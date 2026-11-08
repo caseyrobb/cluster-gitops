@@ -35,9 +35,14 @@ spec:
               disk:
                 bus: virtio
           interfaces:
+            # MACs are declared, not generated: the guest NetworkManager
+            # keyfile binds the static LAN profile by MAC, so NIC PCI
+            # enumeration order (enp2s0 vs enp3s0) can never break it.
             - name: default
+              macAddress: {{ $vm.macAddresses.default }}
               masquerade: {}
             - name: lan0
+              macAddress: {{ $vm.macAddresses.lan }}
               bridge: {}
       evictionStrategy: {{ $vm.evictionStrategy | default "LiveMigrate" }}
       networks:

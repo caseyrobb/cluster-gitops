@@ -135,6 +135,11 @@ vms:
     evictionStrategy: LiveMigrate
     networks:
       lanNad: lan0
+    # Locally-administered unicast (02:), documented in the .bnt keyfile —
+    # keep in sync with [ethernet] mac-address there.
+    macAddresses:
+      default: "02:1a:11:00:00:01"
+      lan: "02:1a:11:00:00:02"
     rootDisk:
       # Golden image cloned per-VM from this DataSource (RWO clone).
       dataSource: fedora-coreos-44-amd64

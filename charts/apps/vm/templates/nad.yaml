@@ -1,4 +1,5 @@
 {{- if .Values.enabled }}
+{{- if .Values.network.enabled }}
 {{- with .Values.network }}
 ---
 apiVersion: k8s.cni.cncf.io/v1
@@ -18,5 +19,6 @@ spec:
   # 2026-11-06 with a multus test pod.) Guests set their own static
   # addresses (see the butane NM keyfile), so no IPAM block is needed.
   config: '{"cniVersion":"0.4.0","name":"{{ .lanNadName }}","type":"macvlan","master":"{{ .macvlanMaster }}","mode":"{{ .mode }}"}'
+{{- end }}
 {{- end }}
 {{- end }}

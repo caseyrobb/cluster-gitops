@@ -1,0 +1,27 @@
+{{- if .Values.enabled }}
+{{- range $name, $dv := .Values.dataVolumes }}
+---
+apiVersion: cdi.kubevirt.io/v1beta1
+kind: DataVolume
+metadata:
+  name: {{ $name }}
+  namespace: {{ $.Values.namespace.name }}
+  {{- with $dv.labels }}
+  labels:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  annotations:
+    # The DataVolume CRD is owned by the CDI operator (installed with
+    # OpenShift Virtualization), not by Git.
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+    {{- with $dv.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  contentType: {{ $dv.contentType | default "data" }}
+  source:
+    {{- toYaml $dv.source | nindent 4 }}
+  pvc:
+    {{- toYaml $dv.pvc | nindent 4 }}
+{{- end }}
+{{- end }}

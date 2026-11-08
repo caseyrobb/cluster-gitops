@@ -30,65 +30,50 @@ dataSources:
       instancetype.kubevirt.io/default-preference: fedora
       instancetype.kubevirt.io/default-preference-kind: VirtualMachineClusterPreference
       template.kubevirt.io/architecture: amd64
-# VolumeImportSources: the populator source objects (source of truth for
-# the image URL). CDI creates these from a DataVolume's spec.source and
-# GARBAGE-COLLECTS them once the import completes — so Git must carry
-# them or the populator flow is not reproducible. Name must match what
-# PVCs' spec.dataSourceRef references (CDI derives
-# volume-import-source-<dv-uid>); spec mirrored from live DV
-# fedora-coreos-44-amd64 (Verified 2026-11-06).
-volumeImportSources:
-  # IMPORTANT: import the *raw* metal disk with contentType 'data'.
-  # The -kubevirt.ociarchive is a container-image tar wrapper, NOT a
-  # disk image; importing it (contentType kubevirt) produced a PVC full
-  # of OCI-layout bytes -> SeaBIOS 'Boot failed: not a bootable disk'
-  # (proven via VNC console on pangolin-test, 2026-11-08). The metal
-  # raw.xz is the BIOS+UEFI bootable disk; CDI transparently
-  # decompresses .xz for contentType data.
-  volume-import-source-a99319d7-2dfd-45f8-bb25-f0f3d2b8de4d:
-    contentType: data
+# Golden image: imported via DataVolume, NOT VolumeImportSource. Two
+# hard-won facts (2026-11-08):
+#  1. The populator admission webhook restricts VolumeImportSource to
+#     contentType kubevirt|archive (both expect a tar containing
+#     disk.img) — a plain raw disk cannot go through the populator path
+#     at all ("ContentType not one of: kubevirt, archive").
+#  2. The -kubevirt.ociarchive is a container-image tar wrapper, NOT a
+#     disk; importing it produced a PVC full of OCI-layout bytes ->
+#     SeaBIOS 'Boot failed: not a bootable disk' (VNC console proof on
+#     pangolin-test).
+# The DataVolume path accepts contentType data with a plain (xz-compressed)
+# raw disk; CDI's importer transparently decompresses .xz. The DV owns
+# (and cascades to) its PVC fedora-coreos-44-amd64, which the Git-owned
+# DataSource above references by name — the VM cloning contract is
+# unchanged.
+dataVolumes:
+  fedora-coreos-44-amd64:
+    # 'data' is NOT accepted on this CDI (live CRD enum: kubevirt|
+    # archive only — Red Hat removed 'data'); 'archive' is the supported
+    # raw-disk path: a (gz) tar containing exactly one disk.img at the
+    # tar root. Built from the Fedora metal raw.xz and hosted as a
+    # release asset of this repo (tag fcos-44.20261023.3.1-disk).
+    contentType: archive
+    annotations:
+      # DV + LVMS: bind must be immediate or the import deadlocks
+      # waiting on a consumerless PVC bind (PR #24 lesson).
+      cdi.kubevirt.io/storage.bind.immediate.requested: "true"
     source:
       http:
-        url: https://builds.coreos.fedoraproject.org/prod/streams/stable/builds/44.20261023.3.1/x86_64/fedora-coreos-44.20261023.3.1-metal.x86_64.raw.xz
-
-# Golden-image PVCs, populated via dataSourceRef -> VolumeImportSource
-# (populator path). Everything the CDI controller/binder stamped is
-# mirrored verbatim so SSA adoption is zero-drift (same technique as the
-# AAP instance adoption); spec.volumeName is the ONE field deliberately
-# absent — it is bind-time-only and hard-coding it would break PVC
-# recreation. ApplicationSet workloads carries a narrow ignoreDifferences
-# for /spec/volumeName. PVC was populated WITHOUT preallocation and WITH
-# bind.immediate — populator + http works fine under those conditions
-# (revises the PR #23 conclusion: the real fix was bind.immediate alone).
-persistentVolumeClaims:
-  fedora-coreos-44-amd64:
-    labels:
-      app: containerized-data-importer
-      app.kubernetes.io/component: storage
-      app.kubernetes.io/managed-by: cdi-controller
-      app.kubernetes.io/part-of: hyperconverged-cluster
-      app.kubernetes.io/version: "4.22.12"
-      instancetype.kubevirt.io/default-preference: fedora
-      instancetype.kubevirt.io/default-preference-kind: VirtualMachineClusterPreference
-    annotations:
-      cdi.kubevirt.io/storage.bind.immediate.requested: "true"
-      cdi.kubevirt.io/storage.usePopulator: "true"
-    spec:
+        # Republished tarball (disk.img at tar root) of Fedora's metal
+        # raw.xz for this build; rebuild + reupload under the same tag
+        # pattern to update. sha256 of the source raw.xz:
+        # 463d18ff2f3686c1cf66ebc5948f32430675d6de005b403a576740c8abbd18ca
+        url: https://github.com/caseyrobb/cluster-gitops/releases/download/fcos-44.20261023.3.1-disk/fcos-44.20261023.3.1-metal-disk.tar.gz
+    pvc:
       accessModes:
         - ReadWriteOnce
-      dataSource:
-        apiGroup: cdi.kubevirt.io
-        kind: VolumeImportSource
-        name: volume-import-source-a99319d7-2dfd-45f8-bb25-f0f3d2b8de4d
-      dataSourceRef:
-        apiGroup: cdi.kubevirt.io
-        kind: VolumeImportSource
-        name: volume-import-source-a99319d7-2dfd-45f8-bb25-f0f3d2b8de4d
       resources:
         requests:
           storage: "10737418240"
       storageClassName: lvms-vg1
       volumeMode: Block
+
+persistentVolumeClaims:
   # Blank data disk for the pangolin-test VM (no dataSource -> plain PVC).
   # Formatted xfs + mounted by the VM ignition on first boot; persists
   # across VM re-creation because this PVC is Git-owned, not a

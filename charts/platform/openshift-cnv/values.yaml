@@ -40,3 +40,8 @@ hyperconverged:
   # 'kubevirt-hyperconverged' (OpenAPI name pattern on the live 4.22 CRD).
   # Set false for operator-only.
   create: true
+
+  # HCO spec.networkBinding map (name -> binding config). Empty = product
+  # defaults. The OCP overlay registers the macvlan managedTap binding used
+  # by charts/apps/vm LAN interfaces.
+  networkBinding: {}

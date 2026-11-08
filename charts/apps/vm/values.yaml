@@ -135,6 +135,9 @@ vms:
     evictionStrategy: LiveMigrate
     networks:
       lanNad: lan0
+      # Binding plugin registered in the HyperConverged CR
+      # (platform/openshift-cnv overlay: macvlan -> managedTap).
+      lanBinding: macvlan
     # Locally-administered unicast (02:), documented in the .bnt keyfile —
     # keep in sync with [ethernet] mac-address there.
     macAddresses:

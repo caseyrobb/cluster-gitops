@@ -43,7 +43,14 @@ spec:
               masquerade: {}
             - name: lan0
               macAddress: {{ $vm.macAddresses.lan }}
+              {{- if $vm.networks.lanBinding }}
+              # Registered on the HyperConverged CR (macvlan -> managedTap);
+              # the legacy bridge binding cannot wire a macvlan child.
+              binding:
+                name: {{ $vm.networks.lanBinding }}
+              {{- else }}
               bridge: {}
+              {{- end }}
       evictionStrategy: {{ $vm.evictionStrategy | default "LiveMigrate" }}
       networks:
         - name: default

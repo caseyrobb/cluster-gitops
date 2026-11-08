@@ -10,7 +10,9 @@ metadata:
     # The VirtualMachine CRD is owned by the OpenShift Virtualization
     # operator, not by Git.
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+    {{- if $vm.networks.lanEnabled }}
     k8s.v1.cni.cncf.io/networks: '[{"name": "{{ $vm.networks.lanNad }}", "interface": "lan0"}]'
+    {{- end }}
   labels:
     app.kubernetes.io/name: {{ $.Chart.Name }}
 spec:
@@ -41,6 +43,13 @@ spec:
             - name: default
               macAddress: {{ $vm.macAddresses.default }}
               masquerade: {}
+              # Masquerade is userspace SLIRP: only ports declared here are
+              # forwarded into the guest from the launcher pod (Services).
+              {{- with $vm.ports }}
+              ports:
+                {{- toYaml . | nindent 16 }}
+              {{- end }}
+            {{- if $vm.networks.lanEnabled }}
             - name: lan0
               macAddress: {{ $vm.macAddresses.lan }}
               {{- if $vm.networks.lanBinding }}
@@ -51,13 +60,16 @@ spec:
               {{- else }}
               bridge: {}
               {{- end }}
+            {{- end }}
       evictionStrategy: {{ $vm.evictionStrategy | default "LiveMigrate" }}
       networks:
         - name: default
           pod: {}
+        {{- if $vm.networks.lanEnabled }}
         - name: lan0
           multus:
             networkName: {{ $vm.networks.lanNad }}
+        {{- end }}
       terminationGracePeriodSeconds: 30
       volumes:
         - name: rootdisk

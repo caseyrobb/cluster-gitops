@@ -120,6 +120,13 @@ secretStore:
 # LAN (OVN-K OVN mode enslaves the physical NIC to OVS; br-ex is the
 # working master — verified 2026-11-06).
 network:
+  # macvlan LAN attachment is disabled until the OCP node networking for
+  # VM-on-LAN is settled (OVN-K OVN mode: multus creates the macvlan child
+  # but no kubevirt binding enslaves it to the tap bridge; the supported
+  # paths are a CNV linux-bridge NNCP on a dedicated NIC, or the kubevirt
+  # macvtap device plugin). VMs run on the masquerade pod network with
+  # declared interface ports + NodePort Service meanwhile.
+  enabled: false
   lanNadName: lan0
   macvlanMaster: br-ex
   mode: bridge
@@ -134,6 +141,8 @@ vms:
     # migration misbehaves on LVMS, switch to DoNotEvict in the overlay.
     evictionStrategy: LiveMigrate
     networks:
+      # Set true once the node-side LAN bridge exists (see network.enabled).
+      lanEnabled: false
       lanNad: lan0
       # Binding plugin registered in the HyperConverged CR
       # (platform/openshift-cnv overlay: macvlan -> managedTap).
@@ -151,6 +160,32 @@ vms:
       # Persistent (standalone PVC, NOT a dataVolumeTemplate) so app state
       # survives VM object deletion/re-creation.
       pvcName: pangolin-test-data
+    # Masquerade SLIRP forwards: every Service port must appear here.
+    ports:
+      - port: 22
+      - port: 80
+      - port: 443
+      - port: 3001
+    service:
+      enabled: true
+      type: NodePort
+      ports:
+        - name: ssh
+          port: 22
+          targetPort: 22
+          nodePort: 30022
+        - name: http
+          port: 80
+          targetPort: 80
+          nodePort: 30080
+        - name: https
+          port: 443
+          targetPort: 443
+          nodePort: 30443
+        - name: pangolin
+          port: 3001
+          targetPort: 3001
+          nodePort: 30301
     cloudInit:
       # Secret (userData key) synced from Vault by the ExternalSecret
       # below; rendered from charts/apps/vm/ignition/pangolin-test.bnt via

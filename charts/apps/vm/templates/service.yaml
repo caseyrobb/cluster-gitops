@@ -1,0 +1,27 @@
+{{- if .Values.enabled }}
+{{- range $name, $vm := .Values.vms }}
+{{- if $vm.service }}
+{{- if $vm.service.enabled }}
+---
+# Masquerade access path: NodePort -> launcher pod ports -> SLIRP forwards
+# (must match spec.domain.devices.interfaces[].ports on the default NIC).
+# The LAN/macvlan path is the eventual production route; this is the
+# bootstrap/durability test access surface.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  namespace: {{ $.Values.namespace.name }}
+  labels:
+    app.kubernetes.io/name: {{ $.Chart.Name }}
+    app.kubernetes.io/instance: {{ $name }}
+spec:
+  type: {{ $vm.service.type | default "NodePort" }}
+  selector:
+    kubevirt.io/domain: {{ $name }}
+  ports:
+    {{- toYaml $vm.service.ports | nindent 4 }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

@@ -95,3 +95,74 @@ persistentVolumeClaims:
           storage: "10737418240"
       storageClassName: lvms-vg1
       volumeMode: Block
+  # Blank data disk for the pangolin-test VM (no dataSource -> plain PVC).
+  # Formatted xfs + mounted by the VM ignition on first boot; persists
+  # across VM re-creation because this PVC is Git-owned, not a
+  # dataVolumeTemplate child of the VM.
+  pangolin-test-data:
+    spec:
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: 5Gi
+      storageClassName: lvms-vg1
+      volumeMode: Block
+
+# Storage class for VM root/data disks (Block volumeMode).
+storageClass: lvms-vg1
+
+# ClusterSecretStore providing VM ignition + env from Vault.
+secretStore:
+  name: vault
+
+# L2 network for VMs: macvlan NAD on the OCP node bridge that carries the
+# LAN (OVN-K OVN mode enslaves the physical NIC to OVS; br-ex is the
+# working master — verified 2026-11-06).
+network:
+  lanNadName: lan0
+  macvlanMaster: br-ex
+  mode: bridge
+
+# VirtualMachines, one map entry per VM (key = VM name).
+vms:
+  pangolin-test:
+    cpu: 2
+    memory: 4Gi
+    runStrategy: Always
+    # LiveMigrate over node eviction; if CSI snapshot-based hotplug
+    # migration misbehaves on LVMS, switch to DoNotEvict in the overlay.
+    evictionStrategy: LiveMigrate
+    networks:
+      lanNad: lan0
+    rootDisk:
+      # Golden image cloned per-VM from this DataSource (RWO clone).
+      dataSource: fedora-coreos-44-amd64
+      size: 10Gi
+    dataDisk:
+      # Persistent (standalone PVC, NOT a dataVolumeTemplate) so app state
+      # survives VM object deletion/re-creation.
+      pvcName: pangolin-test-data
+    cloudInit:
+      # Secret (userData key) synced from Vault by the ExternalSecret
+      # below; rendered from charts/apps/vm/ignition/pangolin-test.bnt via
+      # scripts/render-vm-ignition.sh.
+      secretName: pangolin-test-ignition
+    secretVolumes:
+      # Mounted via virtiofs at /run/secrets/<name> by the guest ignition.
+      - pangolin-env
+    externalSecrets:
+      - name: pangolin-test-ignition
+        vaultPath: vm/pangolin-test
+        property: ignition
+        secretKey: userData
+      - name: pangolin-env
+        vaultPath: vm/pangolin-test
+        property: pangolin-env
+        secretKey: pangolin.env
+      # Same Secret object, second data entry: newt tunnel env
+      # (NEWT_MODE=tunnel client variables).
+      - name: pangolin-env
+        vaultPath: vm/pangolin-test
+        property: newt-env
+        secretKey: newt.env

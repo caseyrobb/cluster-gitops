@@ -1,0 +1,6 @@
+apiVersion: v2
+name: cluster-version
+description: GitOps-owned OpenShift ClusterVersion (channel + desired update).
+type: application
+version: 0.1.0
+appVersion: "4.22"

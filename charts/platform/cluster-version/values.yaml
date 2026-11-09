@@ -1,0 +1,40 @@
+# GitOps control of the cluster's upgrade target (the CVO's ClusterVersion
+# resource, cluster-scoped, name MUST be "version").
+#
+# Upgrades are driven purely by Git: bump `desired.version` (and/or
+# `channel`) in the per-cluster overlay
+# values/clusters/<cluster>/cluster-version.yaml; ArgoCD sync then starts
+# the rolling update. Reverting the value rolls back (if the older
+# release is still offered on the channel — rollbacks across z-streams
+# are supported by CVO via the same graph path).
+#
+# This chart renders NO namespace: ClusterVersion is cluster-scoped.
+# The platform ApplicationSet's CreateNamespace=true still creates an
+# empty '<basename>' namespace as a destination placeholder — harmless.
+#
+# selfHeal note: any imperative `oc adm upgrade` is reverted to Git's
+# target on the next sync — by design (single source of truth). Use
+# `force: true` only when Cincinnati withholds an update you have
+# validated manually.
+enabled: true
+
+# Identity fields. clusterID is REQUIRED by the CRD and is immutable
+# cluster identity (a UUID, not a secret) — pin it per cluster in the
+# overlay; a mismatched clusterID makes CVO refuse to act (safety rail:
+# this manifest cannot be pointed at the wrong cluster).
+clusterID: ""
+
+channel: stable-4.22
+
+# Omitted by default: the chart alone is a no-op until an overlay pins
+# a version, so adopting the chart never surprises anyone with an
+# upgrade.
+desired:
+  version: ""
+  # Leave `image` empty to let Cincinnati resolve from channel+version.
+  image: ""
+  force: false
+
+# null => keep whatever upstream the cluster already has (the default
+# Red Hat graph). Set a Cincinnati URI only for custom graphs.
+upstream: null

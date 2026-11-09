@@ -1,0 +1,8 @@
+# OCP homelab: GitOps-owned upgrades on the stable-4.22 channel.
+# 4.22.22 validated present in the stable-4.22 Cincinnati graph before
+# this PR (api.openshift.com upgrades_info graph, from 4.22.20).
+enabled: true
+clusterID: 000c389d-5e51-45f3-b5ee-e53285de0b18
+channel: stable-4.22
+desired:
+  version: 4.22.22

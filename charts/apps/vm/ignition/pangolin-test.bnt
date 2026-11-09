@@ -19,6 +19,7 @@ passwd:
     - name: fedora
       ssh_authorized_keys:
         - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIO20GVqdsyeREE+UJD1JwAxUyg2Jt7XeNNTB7YQXSFjw carobb@zeta
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMDAnudRm6MyKEsJDcnSuI7SAlEErjyDDnpjw0BRac4m crobb@spark.redcomet.ca
       groups:
         - wheel
         - sudo
@@ -58,13 +59,15 @@ storage:
       format: xfs
       label: pangolin    # xfs labels cap at 12 chars
       wipe_filesystem: false
-  directories:
-    - path: /run/secrets/pangolin
-      mode: 0755
+  # NOTE: no /run/secrets/pangolin directory here on purpose: /run is
+  # runtime tmpfs (Ignition's files stage hits "read-only file system"
+  # on /sysroot/run, proven live). The KubeVirt virtiofs secret volume
+  # mounts /run/secrets/pangolin at VM start, before any quadlet unit runs.
   files:
     # ---- quadlet pod -------------------------------------------------------
     - path: /etc/containers/systemd/pangolin.pod
       mode: 0644
+      overwrite: true
       contents:
         inline: |
           # pangolin CE stack (mirrors fosrl/pangolin compose.example.yaml)
@@ -85,6 +88,7 @@ storage:
           After=run-secrets-pangolin.mount
     - path: /etc/containers/systemd/pangolin.container
       mode: 0644
+      overwrite: true
       contents:
         inline: |
           [Container]
@@ -99,6 +103,7 @@ storage:
           HealthStartPeriod=90s
     - path: /etc/containers/systemd/gerbil.container
       mode: 0644
+      overwrite: true
       contents:
         inline: |
           [Container]
@@ -112,6 +117,7 @@ storage:
           After=pangolin-container.service
     - path: /etc/containers/systemd/traefik.container
       mode: 0644
+      overwrite: true
       contents:
         inline: |
           [Container]
@@ -129,6 +135,7 @@ storage:
           After=pangolin-container.service
     - path: /etc/containers/systemd/newt.container
       mode: 0644
+      overwrite: true
       contents:
         inline: |
           [Container]
@@ -145,6 +152,7 @@ storage:
     # ---- traefik plumbing: podman docker-compatible API + config ---------
     - path: /etc/containers/systemd/podman-docker.socket
       mode: 0644
+      overwrite: true
       contents:
         inline: |
           [Socket]
@@ -153,7 +161,7 @@ storage:
           WantedBy=sockets.target
     - path: /opt/pangolin/config/traefik/traefik_config.yml
       mode: 0644
-      overwrite: false
+      overwrite: true
       contents:
         inline: |
           entryPoints:
@@ -171,6 +179,7 @@ storage:
     # ---- virtiofs mount of the ESO-fed secret volume ----------------------
     - path: /etc/systemd/system/run-secrets-pangolin.mount
       mode: 0644
+      overwrite: true
       contents:
         inline: |
           [Unit]
@@ -189,6 +198,7 @@ storage:
     # enumeration accident. The masquerade NIC is left to DHCP.
     - path: /etc/NetworkManager/system-connections/pangolin-lan.nmconnection
       mode: 0600
+      overwrite: true
       contents:
         inline: |
           [connection]

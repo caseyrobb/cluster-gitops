@@ -63,7 +63,7 @@ dataVolumes:
         # raw.xz for this build; rebuild + reupload under the same tag
         # pattern to update. sha256 of the source raw.xz:
         # 463d18ff2f3686c1cf66ebc5948f32430675d6de005b403a576740c8abbd18ca
-        url: https://github.com/caseyrobb/cluster-gitops/releases/download/fcos-44.20261023.3.1-disk/fcos-44.20261023.3.1-metal-disk.tar.gz
+        url: https://github.com/caseyrobb/cluster-gitops/releases/download/fcos-44.20261023.3.1-disk/fcos-44.20261023.3.1-metal-disk-kargs.tar.gz
     pvc:
       accessModes:
         - ReadWriteOnce

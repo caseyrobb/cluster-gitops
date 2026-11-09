@@ -1,11 +1,10 @@
-{{- if .Values.enabled }}
-{{- if not .Values.clusterID }}
-{{- fail "cluster-version: clusterID is required (pin the cluster's UUID in the per-cluster overlay)" }}
-{{- end }}
+{{- if and .Values.enabled .Values.clusterID }}
 ---
 # The CVO reconciles against this resource; we own only the upgrade
 # intent fields below (ServerSideApply is the AppSet-wide sync option,
 # so field ownership is explicit and status is never touched).
+# Rendered only when clusterID is pinned; with no desired.version the
+# resource merely adopts the channel (no-op adoption).
 apiVersion: config.openshift.io/v1
 kind: ClusterVersion
 metadata:
@@ -26,4 +25,6 @@ spec:
     force: true
     {{- end }}
   {{- end }}
+{{- else if and .Values.enabled .Values.desired.version }}
+{{- fail "cluster-version: clusterID is required when desired.version is set (pin the cluster's UUID in the per-cluster overlay)" }}
 {{- end }}

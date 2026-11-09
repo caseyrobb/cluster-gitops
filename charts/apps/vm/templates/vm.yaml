@@ -79,10 +79,11 @@ spec:
           persistentVolumeClaim:
             claimName: {{ $vm.dataDisk.pvcName }}
         {{- range $sv := $vm.secretVolumes }}
-        # Secret volumes mount over virtiofs; the guest ignition mounts the
-        # tag (= volume name) at /run/secrets/<name> and podman quadlet
-        # units read EnvironmentFile from there. Nothing secret is written
-        # to the disk image.
+        # Secret volumes arrive as iso9660 cdroms labeled cfgdata (not
+        # virtiofs on this CNV — live-verified); the guest mounts the
+        # label at /run/secrets/pangolin and podman quadlet units read
+        # EnvironmentFile from there. Nothing secret is written to the
+        # disk image.
         - name: {{ $sv }}
           secret:
             secretName: {{ $sv }}

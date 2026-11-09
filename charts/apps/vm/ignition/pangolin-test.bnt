@@ -1,17 +1,37 @@
 # Pangolin server VM — Fedora CoreOS butane config (rendered to Ignition
-# and stored in Vault; the VM consumes it via cloudInitNoCloud).
+# and stored in Vault; the VM consumes it via cloudInitConfigDrive).
 #
-# Bootstraps the pangolin Community Edition stack (app + gerbil + traefik,
-# embedded SQLite) as a podman quadlet pod. All state lives on the second
-# (data) disk: formatted once on first boot at /opt/pangolin, survives VM
-# re-creation. Pangolin secrets arrive at runtime from the k8s Secret
-# (Vault -> ESO) that KubeVirt mounts via virtiofs at /run/secrets/pangolin
-# — nothing secret is ever written to the disk image.
+# Bootstraps the pangolin Community Edition stack (app + postgres +
+# gerbil + traefik + newt + dummy target) as a podman quadlet pod
+# mirroring fosrl/pangolin compose.example.yaml. All app state lives on
+# the second (data) disk: formatted once by the storage section below at
+# /var/opt/pangolin, survives VM re-creation. /etc/containers/systemd is
+# written here; the quadlet generator materializes + autostarts the
+# units every boot ([Install] sections are the durability mechanism —
+# no manual systemctl enable needed).
 #
-# Network: the VM's second NIC (macvlan NAD on the OCP node's br-ex) is
-# statically addressed 172.16.0.95/22 via NetworkManager keyfile; the
-# masquerade (pod-network) NIC keeps the default route for VM egress, and
-# LAN responses ride the connected route.
+# IMPORTANT — the data disk is NOT touched by Ignition's files stage:
+# Ignition runs in the initramfs BEFORE fstab mounts, so any file here
+# under /var/opt/pangolin lands on the ROOT disk and is silently shadowed
+# by the data-disk mount (proven live). Instead, seed files are written
+# under /var/lib/pangolin-seed (root disk) and pangolin-seed.service
+# copies them onto the data disk on first boot, idempotently.
+#
+# Secrets arrive at runtime from the k8s Secret pangolin-env (Vault ->
+# ESO) that KubeVirt mounts as an iso9660 cdrom labeled cfgdata;
+# run-secrets-pangolin.mount attaches it at /run/secrets/pangolin and
+# the quadlet units read EnvironmentFile from there. Nothing secret is
+# ever written to the disk image. (KubeVirt secret volumes are NOT
+# virtiofs on this CNV — live-verified: iso9660, label cfgdata, /dev/sda.)
+#
+# Network: the VM's second NIC (cnv-bridge NAD on the node's br-vm linux
+# bridge) is statically addressed 172.16.0.95/22 via a NetworkManager
+# keyfile bound by MAC; the masquerade NIC keeps the default route for
+# VM egress, and LAN responses ride the connected route.
+#
+# Platform note: Ignition only reads the ConfigDrive datasource when
+# ignition.platform.id=openstack is on the kernel cmdline — baked into
+# the golden image's BLS entry (see values.yaml golden-image comments).
 variant: fcos
 version: 1.5.0
 passwd:
@@ -26,26 +46,59 @@ passwd:
         - docker
 systemd:
   units:
-    - name: run-secrets-pangolin.mount
-      enabled: true
-    - name: pangolin-pod.service
-      enabled: true
-    - name: opt-pangolin.mount
+    # Mounts + seeder are declared as units (enabled) so Ignition wires
+    # the .wants symlinks on first boot. The quadlet units below are NOT
+    # listed here: podman's systemd generator honors their [Install]
+    # sections every boot (is-enabled -> "generated", reboot-proven).
+    - name: var-opt-pangolin.mount
       enabled: true
       contents: |
         [Unit]
-        Description=Pangolin data disk (second virtio disk)
+        Description=Pangolin data disk (second PVC)
         [Mount]
         What=/dev/disk/by-label/pangolin
-        Where=/opt/pangolin
+        Where=/var/opt/pangolin
         Type=xfs
         Options=defaults
         [Install]
+        WantedBy=local-fs.target
+    - name: run-secrets-pangolin.mount
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Pangolin secrets (KubeVirt secret volume, iso9660)
+        [Mount]
+        What=/dev/disk/by-label/cfgdata
+        Where=/run/secrets/pangolin
+        Type=iso9660
+        Options=ro
+        [Install]
+        WantedBy=local-fs.target
+    - name: pangolin-seed.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Seed pangolin data disk from root-disk seed files
+        Requires=var-opt-pangolin.mount
+        After=var-opt-pangolin.mount
+        [Service]
+        Type=oneshot
+        RemainAfterExit=yes
+        ExecStart=/var/lib/pangolin-seed/seed.sh
+        [Install]
         WantedBy=multi-user.target
+    # Contents-less entry: Ignition only wires the sockets.target.wants
+    # symlink for the vendor podman.socket (whose ListenStream is
+    # /run/podman/podman.sock, mounted by pangolin + traefik for the
+    # dockerSocket path) — writing a unit file here would shadow and
+    # break the vendor unit.
+    - name: podman.socket
+      enabled: true
+
 storage:
   disks:
     # Data disk (VM second virtio disk). wipeTable false + no-op when the
-    # filesystem already exists: idempotent across VM re-creations.
+    # partition table already exists: idempotent across VM re-creations.
     - device: /dev/vdb
       wipe_table: false
       partitions:
@@ -54,15 +107,16 @@ storage:
   filesystems:
     # Created only if absent (mkfs is a no-op when the xfs is already
     # there) — idempotent across VM re-creations. Mounted persistently by
-    # the opt-pangolin.mount unit below.
+    # the var-opt-pangolin.mount unit above. NOT by Ignition mounts:
+    # /var/opt (not /opt — FCOS /opt is a read-only symlink to /usr).
     - device: /dev/vdb1
       format: xfs
       label: pangolin    # xfs labels cap at 12 chars
       wipe_filesystem: false
   # NOTE: no /run/secrets/pangolin directory here on purpose: /run is
   # runtime tmpfs (Ignition's files stage hits "read-only file system"
-  # on /sysroot/run, proven live). The KubeVirt virtiofs secret volume
-  # mounts /run/secrets/pangolin at VM start, before any quadlet unit runs.
+  # on /sysroot/run, proven live). run-secrets-pangolin.mount attaches
+  # the cfgdata cdrom at VM start, before any quadlet unit runs.
   files:
     # ---- quadlet pod -------------------------------------------------------
     - path: /etc/containers/systemd/pangolin.pod
@@ -70,96 +124,231 @@ storage:
       overwrite: true
       contents:
         inline: |
-          # pangolin CE stack (mirrors fosrl/pangolin compose.example.yaml)
+          # pangolin CE stack (mirrors fosrl/pangolin compose.example.yaml).
           # All containers share one netns (== compose network_mode:
-          # service:gerbil); traefik's 80/443 and gerbil's UDP tunnel ports
-          # are published on the VM itself.
+          # service:gerbil); traefik's 80/443, the pangolin API on 3000 and
+          # gerbil's UDP tunnel ports are published on the VM itself.
+          # NOTE: no RestartPolicy= here — podman 5.8 quadlet rejects it
+          # (generator exit 1, proven live); [Service] Restart= per unit
+          # below is the supported equivalent.
           [Pod]
           PodName=pangolin
           PublishPort=80:80
           PublishPort=443:443
+          PublishPort=3000:3000
           PublishPort=51820:51820/udp
           PublishPort=21820:21820/udp
-          AddCapability=NET_ADMIN
-          AddCapability=SYS_MODULE
-          RestartPolicy=always
           [Service]
           Requires=run-secrets-pangolin.mount
           After=run-secrets-pangolin.mount
+          Requires=pangolin-seed.service
+          After=pangolin-seed.service
+          [Install]
+          WantedBy=multi-user.target
     - path: /etc/containers/systemd/pangolin.container
       mode: 0644
       overwrite: true
       contents:
         inline: |
+          # Pangolin server. Its real API/dashboard port is 3000 (3001 is
+          # only the internal gerbil-facing config API). The podman socket
+          # mount lets the dockerSocket site integration talk to podman's
+          # docker-compatible API.
           [Container]
           Pod=pangolin.pod
           Image=docker.io/fosrl/pangolin:1.26.0
-          Volume=/opt/pangolin/config:/app/config:Z
+          Volume=/var/opt/pangolin/config:/app/config:Z
           EnvironmentFile=/run/secrets/pangolin/pangolin.env
-          HealthCmd=curl -f http://localhost:3001/api/v1/
+          Environment=DOCKER_HOST=unix:///var/run/docker.sock
+          Volume=/run/podman/podman.sock:/var/run/docker.sock:Z
+          HealthCmd=curl -f http://localhost:3000/api/v1/
           HealthInterval=10s
           HealthTimeout=5s
           HealthRetries=30
           HealthStartPeriod=90s
+          [Service]
+          After=postgres.service
+          Restart=always
+          RestartSec=5
+          [Install]
+          WantedBy=multi-user.target
+    - path: /etc/containers/systemd/postgres.container
+      mode: 0644
+      overwrite: true
+      contents:
+        inline: |
+          # CE supports embedded SQLite, but the Postgres backend is the
+          # production path; DATABASE_URL in pangolin.env points here.
+          [Container]
+          Pod=pangolin.pod
+          Image=docker.io/library/postgres:17
+          Environment=POSTGRES_USER=pangolin
+          Environment=POSTGRES_PASSWORD=***
+          Environment=POSTGRES_DB=pangolin
+          Volume=/var/opt/pangolin/db:/var/lib/postgresql/data:Z
+          [Service]
+          Restart=always
+          RestartSec=5
+          [Install]
+          WantedBy=multi-user.target
     - path: /etc/containers/systemd/gerbil.container
       mode: 0644
       overwrite: true
       contents:
         inline: |
+          # gerbil = WireGuard exit-node coordinator. reachableAt must be
+          # the URL pangolin uses to reach gerbil's HTTP API — this image
+          # serves HTTP on :3003 (live log: "Starting HTTP server on
+          # :3003"), so reachableAt says 3003, not the compose doc's 3004.
           [Container]
           Pod=pangolin.pod
           Image=docker.io/fosrl/gerbil:1.6.0
-          Volume=/opt/pangolin/config:/var/config:Z
-          Exec=--reachableAt=http://gerbil:3004
+          Volume=/var/opt/pangolin/config:/var/config:Z
+          AddCapability=NET_ADMIN
+          AddCapability=SYS_MODULE
+          Exec=--reachableAt=http://gerbil:3003
           Exec=--generateAndSaveKeyTo=/var/config/key
           Exec=--remoteConfig=http://pangolin:3001/api/v1/
           [Service]
-          After=pangolin-container.service
+          After=pangolin.service
+          Restart=always
+          RestartSec=5
+          [Install]
+          WantedBy=multi-user.target
     - path: /etc/containers/systemd/traefik.container
       mode: 0644
       overwrite: true
       contents:
         inline: |
+          # Traefik runs in pangolin's FILE mode (config.yml traefik.
+          # file_mode: true): pangolin writes router_config.yml into the
+          # shared traefik dir and the file provider watches it. No docker
+          # provider is needed; the socket mounts are kept for the
+          # dockerSocket site integration path.
           [Container]
           Pod=pangolin.pod
           Image=docker.io/library/traefik:v3.7
-          # Podman docker-compatible socket (see podman-docker.socket) —
-          # the Traefik docker provider discovers pangolin's dynamic route
-          # labels through it.
           Environment=DOCKER_HOST=unix:///var/run/docker.sock
-          Volume=/run/podman/docker.sock:/var/run/docker.sock:Z
-          Volume=/opt/pangolin/config/traefik:/etc/traefik:ro,Z
-          Volume=/opt/pangolin/config/letsencrypt:/letsencrypt:Z
+          Volume=/run/podman/podman.sock:/var/run/docker.sock:Z
+          Volume=/var/opt/pangolin/config/traefik:/etc/traefik:ro,Z
+          Volume=/var/opt/pangolin/config/letsencrypt:/letsencrypt:Z
           Exec=--configFile=/etc/traefik/traefik_config.yml
           [Service]
-          After=pangolin-container.service
+          After=pangolin.service
+          Restart=always
+          RestartSec=5
+          [Install]
+          WantedBy=multi-user.target
     - path: /etc/containers/systemd/newt.container
       mode: 0644
       overwrite: true
       contents:
         inline: |
+          # NEWT_MODE=tunnel client: dials OUT to the pangolin/gerbil
+          # WireGuard endpoint and publishes its local service over that
+          # tunnel, so it needs no inbound ports. PANGOLIN_ENDPOINT must
+          # live under [Container] (quadlet ignores keys after [Service]).
+          # NET_RAW is required for newt's ICMP health pings over the
+          # tunnel (without it: "failed to read ICMP packet", live).
           [Container]
-          # NEWT_MODE=tunnel is a client: it dials OUT to the pangolin/
-          # gerbil wireguard endpoint and publishes its local service over
-          # that tunnel, so it needs no inbound ports. Its env (tunnel id/
-          # secret, target host+port) comes from the same Vault-backed
-          # secret volume.
           Image=docker.io/fosrl/newt:1.20.0
-          NetworkMode=host
+          Network=host
+          AddCapability=NET_ADMIN
+          AddCapability=SYS_MODULE
+          AddCapability=NET_RAW
+          Environment=PANGOLIN_ENDPOINT=http://127.0.0.1:3000
           EnvironmentFile=/run/secrets/pangolin/newt.env
           [Service]
-          After=pangolin-container.service
-    # ---- traefik plumbing: podman docker-compatible API + config ---------
-    - path: /etc/containers/systemd/podman-docker.socket
+          After=gerbil.service
+          Restart=always
+          RestartSec=5
+          [Install]
+          WantedBy=multi-user.target
+    - path: /etc/containers/systemd/dummy.container
       mode: 0644
       overwrite: true
       contents:
         inline: |
-          [Socket]
-          ListenStream=/run/podman/docker.sock
+          # Tunnel acceptance target: tiny httpd on :8080 (80 would collide
+          # with traefik in the shared netns) that the pangolin target
+          # resource proxies through the newt tunnel.
+          [Container]
+          Pod=pangolin.pod
+          Image=docker.io/library/httpd:2.4
+          Volume=/var/lib/pangolin-seed/dummy.sh:/dummy.sh:Z
+          Exec=sh /dummy.sh
+          [Service]
+          After=pangolin-pod.service
+          Restart=always
+          RestartSec=5
           [Install]
-          WantedBy=sockets.target
-    - path: /opt/pangolin/config/traefik/traefik_config.yml
+          WantedBy=multi-user.target
+    # ---- first-boot seeder (writes onto the DATA disk) --------------------
+    - path: /var/lib/pangolin-seed/seed.sh
+      mode: 0755
+      overwrite: true
+      contents:
+        inline: |
+          #!/bin/bash
+          # Copy the shipped config onto the data disk the first time it
+          # mounts empty (Ignition cannot: it runs before the mount).
+          # Idempotent: never overwrites existing app state.
+          set -eu
+          M=/var/opt/pangolin
+          if [ ! -f "$M/config/config.yml" ]; then
+            mkdir -p "$M/config" "$M/db"
+            cp -a /var/lib/pangolin-seed/config/. "$M/config/"
+          fi
+          mkdir -p "$M/config/letsencrypt"
+          grep -q "dashboard.pangolin.test" /etc/hosts || \
+            printf "172.16.0.95 dashboard.pangolin.test dummy.pangolin.test\n" >> /etc/hosts
+    - path: /var/lib/pangolin-seed/dummy.sh
+      mode: 0755
+      overwrite: true
+      contents:
+        inline: |
+          #!/bin/sh
+          sed -i "s/^Listen 80$/Listen 8080/" /usr/local/apache2/conf/httpd.conf
+          echo "<h1>dummy-service</h1>" > /usr/local/apache2/htdocs/index.html
+          exec httpd -DFOREGROUND
+    - path: /var/lib/pangolin-seed/config/config.yml
+      mode: 0644
+      overwrite: true
+      contents:
+        inline: |
+          # pangolin CE server config (see live-verified traefik file_mode:
+          # pangolin writes router_config.yml + cert config into the
+          # shared traefik dir; DB creds arrive via DATABASE_URL env from
+          # the Vault-backed secret volume, not from this file).
+          gerbil:
+              start_port: 51820
+              base_endpoint: "dashboard.pangolin.test"
+          app:
+              dashboard_url: "http://dashboard.pangolin.test"
+              log_level: "info"
+              telemetry:
+                  anonymous_usage: false
+          domains:
+              domain1:
+                  base_domain: "pangolin.test"
+          server:
+              secret: "c2VjcmV0LXBhbmdvbGluLXRlc3Q"
+              cors:
+                  origins: ["http://dashboard.pangolin.test"]
+                  methods: ["GET", "POST", "PUT", "DELETE", "PATCH"]
+                  allowed_headers: ["X-CSRF-Token", "Content-Type"]
+                  credentials: false
+          flags:
+              require_email_verification: false
+              disable_signup_without_invite: false
+              disable_user_create_org: false
+              allow_raw_resources: true
+          traefik:
+              file_mode: true
+              dynamic_router_config_path: "/app/config/traefik/router_config.yml"
+              dynamic_cert_config_path: "/app/config/traefik/cert_config.yml"
+              certificates_path: "/app/config/traefik/certificates"
+    - path: /var/lib/pangolin-seed/config/traefik/traefik_config.yml
       mode: 0644
       overwrite: true
       contents:
@@ -170,29 +359,11 @@ storage:
             websecure:
               address: ":443"
           providers:
-            docker:
-              endpoint: "unix:///var/run/docker.sock"
-              network: pangolin-net
-              exposedByDefault: false
-          api:
-            dashboard: false
-    # ---- virtiofs mount of the ESO-fed secret volume ----------------------
-    - path: /etc/systemd/system/run-secrets-pangolin.mount
-      mode: 0644
-      overwrite: true
-      contents:
-        inline: |
-          [Unit]
-          Description=Pangolin env (KubeVirt secret volume via virtiofs)
-          [Mount]
-          What=pangolin-env
-          Where=/run/secrets/pangolin
-          Type=virtiofs
-          Options=ro
-          [Install]
-          WantedBy=multi-user.target
-    # ---- static LAN address on the macvlan NIC -----------------------------
-    # Bound by MAC (02:1a:11:00:00:02 = lan0, declared in the VM spec via
+            file:
+              filename: "/etc/traefik/router_config.yml"
+              watch: true
+    # ---- static LAN address on the bridge NIC -----------------------------
+    # Bound by MAC (02:1A:11:00:00:02 = lan0, declared in the VM spec via
     # values.macAddresses) instead of by PCI-derived name: kubevirt places
     # NICs on consecutive slots and the name (enp2s0/enp3s0) is an
     # enumeration accident. The masquerade NIC is left to DHCP.
@@ -213,5 +384,3 @@ storage:
           may-fail=true
           [ipv6]
           method=ignore
-          [ipv6]
-          method=disabled

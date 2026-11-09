@@ -143,11 +143,13 @@ vms:
       # survives VM object deletion/re-creation.
       pvcName: pangolin-test-data
     # Masquerade SLIRP forwards: every Service port must appear here.
+    # Pangolin's API/dashboard listens on 3000 (live probe: 3000 serves
+    # the API, 3001 is only the internal gerbil-facing config API).
     ports:
       - port: 22
       - port: 80
       - port: 443
-      - port: 3001
+      - port: 3000
     service:
       enabled: true
       type: NodePort
@@ -165,8 +167,8 @@ vms:
           targetPort: 443
           nodePort: 30443
         - name: pangolin
-          port: 3001
-          targetPort: 3001
+          port: 3000
+          targetPort: 3000
           nodePort: 30301
     cloudInit:
       # Secret (userData key) synced from Vault by the ExternalSecret
@@ -174,7 +176,10 @@ vms:
       # scripts/render-vm-ignition.sh.
       secretName: pangolin-test-ignition
     secretVolumes:
-      # Mounted via virtiofs at /run/secrets/<name> by the guest ignition.
+      # KubeVirt serializes secret volumes as iso9660 cdroms labeled
+      # cfgdata (NOT virtiofs on this CNV — live-verified); the guest
+      # mounts the label at /run/secrets/pangolin (run-secrets-pangolin.
+      # mount) and quadlet units read EnvironmentFile from there.
       - pangolin-env
     # One ExternalSecret per name; each may carry multiple Vault keys into
     # the SAME Secret (one list entry per name — two list entries with the

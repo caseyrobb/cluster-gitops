@@ -32,6 +32,8 @@ CLUSTER_CRDS = [
     "clusterissuers.cert-manager.io",
     "certificates.cert-manager.io",
     "oauths.config.openshift.io",
+    # charts/platform/cluster-version: the CVO ClusterVersion (upgrade intent).
+    "clusterversions.config.openshift.io",
     "argocds.argoproj.io",
 ]
 

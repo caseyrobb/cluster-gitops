@@ -84,7 +84,11 @@ systemd:
         [Service]
         Type=oneshot
         RemainAfterExit=yes
-        ExecStart=/var/lib/pangolin-seed/seed.sh
+        # Invoked via bash, not exec'd directly: files written by
+        # Ignition land as var_lib_t, which SELinux does not grant as a
+        # systemd unit exec entrypoint (203/EXEC, proven live); bash only
+        # needs read.
+        ExecStart=/usr/bin/bash /var/lib/pangolin-seed/seed.sh
         [Install]
         WantedBy=multi-user.target
     # Contents-less entry: Ignition only wires the sockets.target.wants

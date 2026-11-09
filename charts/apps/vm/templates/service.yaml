@@ -18,7 +18,9 @@ metadata:
 spec:
   type: {{ $vm.service.type | default "NodePort" }}
   selector:
-    kubevirt.io/domain: {{ $name }}
+    # CNV 4.22 labels virt-launcher pods with vm.kubevirt.io/name;
+    # the legacy kubevirt.io/domain label is gone (endpoints stayed empty).
+    vm.kubevirt.io/name: {{ $name }}
   ports:
     {{- toYaml $vm.service.ports | nindent 4 }}
 {{- end }}

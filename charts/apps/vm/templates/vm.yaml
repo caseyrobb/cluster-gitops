@@ -28,20 +28,6 @@ spec:
           cores: {{ $vm.cpu }}
         memory:
           guest: {{ $vm.memory }}
-        {{- with $vm.bootloader }}
-        # NOTE: OpenShift CNV places kernelArguments under
-        # domain.firmware.bootloader (upstream KubeVirt uses domain.bootloader).
-        # FCOS's Ignition only probes the OpenStack ConfigDrive datasource
-        # when told to via ignition.platform.id; without it the
-        # perfectly-built config-2 ISO is ignored ("no config provided").
-        firmware:
-          bootloader:
-            kernelArguments:
-              {{- range .kernelArguments }}
-              - name: {{ .name }}
-                value: {{ .value | quote }}
-              {{- end }}
-        {{- end }}
         devices:
           disks:
             - name: rootdisk
@@ -103,10 +89,11 @@ spec:
         {{- end }}
         - name: cloudinit
           # ConfigDrive, not NoCloud: Ignition does not implement the
-          # NoCloud datasource (that is cloud-init only). FCOS auto-detects
-          # the ConfigDrive volume (label CONFIG) via its openstack
-          # platform. Proven live: a correct cidata-labeled NoCloud ISO
-          # (user-data + meta-data) was ignored -- "no config provided".
+          # NoCloud datasource (that is cloud-init only). Requires the
+          # kernel argument ignition.platform.id=openstack, which is baked
+          # into the golden image's BLS entry (CNV 4.22 CRD gained no
+          # domain.bootloader.kernelArguments). A cidata-labeled NoCloud
+          # ISO is ignored outright by Ignition -- only ConfigDrive works.
           cloudInitConfigDrive:
             secretRef:
               name: {{ $vm.cloudInit.secretName }}

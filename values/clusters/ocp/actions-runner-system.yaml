@@ -1,7 +1,5 @@
 # OCP homelab: ARC v2 controller in actions-runner-system.
-# The caseyrobb runner scale set stays OFF until the GitHub PAT is stored:
-#   vault kv put chaos/ocp/arc github_token=ghp_...
-# then flip scaleSet.enabled here.
+# PAT stored in Vault (chaos/data/ocp/arc, key github_token) — scale set live.
 enabled: true
 scaleSet:
-  enabled: false
+  enabled: true

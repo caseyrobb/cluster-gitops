@@ -1,0 +1,71 @@
+# GitHub Actions Runner Controller — new autoscaling runner scale set mode
+# (RunnerScaleSet CRs, docs.github.com quickstart), NOT the legacy
+# actions.summerwind.net mode. The controller itself is credential-less;
+# GitHub auth lives per scale set in a githubConfigSecret.
+
+# Master switch (gates BOTH dependencies via Chart.yaml conditions).
+enabled: true
+
+# Gate for the caseyrobb runner scale set: flip true in the cluster
+# overlay only after the PAT exists in Vault (see githubAuth below).
+scaleSet:
+  enabled: false
+
+gha-runner-scale-set-controller:
+  # Single replica is fine at homelab scale; leader election only matters
+  # with replicaCount>1.
+  replicaCount: 1
+  # Deterministic resource names (SA = gha-rs-controller): the scale set
+  # chart below must reference the controller ServiceAccount by name
+  # because its live-Deployment discovery cannot run under helm template.
+  fullnameOverride: gha-rs-controller
+  image:
+    # Tag defaults to the chart appVersion (0.15.1); pinned explicitly so
+    # version bumps touch one place.
+    tag: "0.15.1"
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+gha-runner-scale-set:
+  # Explicit controller wiring (bypasses the chart's lookup of a live
+  # controller Deployment — impossible at helm-template/Argo render time).
+  # SA name comes from fullnameOverride above; namespace is the AppSet's
+  # destination namespace (= this chart directory's basename).
+  controllerServiceAccount:
+    name: gha-rs-controller
+    namespace: actions-runner-system
+  # Scale set serving all personal repos under caseyrobb (runners are
+  # still only used by repos where they are enabled on the repo/org
+  # settings page).
+  githubConfigUrl: https://github.com/caseyrobb
+  # STRING form = reference an existing secret (chart skips rendering its
+  # own). Populated by templates/externalsecret.yaml from Vault via ESO.
+  githubConfigSecret: caseyrobb-github-config
+  maxRunners: 5
+  minRunners: 0
+  # Runner pod template. ghcr.io/actions/actions-runner ships the runner
+  # binary and runs as its non-root `runner` user (restricted SCC-safe).
+  template:
+    spec:
+      containers:
+        - name: runner
+          image: ghcr.io/actions/actions-runner:latest
+          command: ["/home/runner/run.sh"]
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 4Gi
+
+githubAuth:
+  secretStore: vault
+  # Vault KV v2 (mount `chaos`): chaos/data/ocp/arc => {"github_token": "ghp_..."}
+  vaultPath: ocp/arc
+  tokenKey: github_token

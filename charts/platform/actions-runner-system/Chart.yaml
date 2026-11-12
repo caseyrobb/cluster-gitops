@@ -1,0 +1,17 @@
+apiVersion: v2
+name: actions-runner-system
+description: GitHub Actions Runner Controller (ARC v2 autoscaling runner scale sets) — controller + caseyrobb scale set, PAT via ESO
+type: application
+version: 0.1.0
+appVersion: "0.15.1"
+dependencies:
+  # New-mode ARC charts are published OCI-only (the GitHub Pages repo froze
+  # with legacy 0.23.7). OCI deps resolve at helm dependency update time.
+  - name: gha-runner-scale-set-controller
+    version: 0.15.1
+    repository: oci://ghcr.io/actions/actions-runner-controller-charts
+    condition: enabled
+  - name: gha-runner-scale-set
+    version: 0.15.1
+    repository: oci://ghcr.io/actions/actions-runner-controller-charts
+    condition: scaleSet.enabled

@@ -6,7 +6,7 @@
 # Master switch (gates BOTH dependencies via Chart.yaml conditions).
 enabled: true
 
-# Gate for the caseyrobb runner scale set: flip true in the cluster
+# Gate for the crobb-org runner scale set: flip true in the cluster
 # overlay only after the PAT exists in Vault (see githubAuth below).
 scaleSet:
   enabled: false
@@ -39,9 +39,9 @@ gha-runner-scale-set:
   controllerServiceAccount:
     name: gha-rs-controller
     namespace: actions-runner-system
-  # Scale set serving all personal repos under caseyrobb (runners are
-  # still only used by repos where they are enabled on the repo/org
-  # settings page).
+  # Scale set scope: MUST be enterprise/org/repo — ARC v2 has no
+  # personal-user scope (user URLs 404 on the orgs/... registration-token
+  # endpoint). The real value is set per-cluster in the overlay.
   githubConfigUrl: https://github.com/caseyrobb
   # STRING form = reference an existing secret (chart skips rendering its
   # own). Populated by templates/externalsecret.yaml from Vault via ESO.

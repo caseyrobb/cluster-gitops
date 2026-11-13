@@ -1,14 +1,15 @@
 # ocp (homelab) overlay — OpenShift Compliance Operator.
-# Operator (stable channel, v1.10.1) installed via PR #52; scan verified
-# against the live profile catalog 2026-11-13 (ocp4-moderate /
-# ocp4-moderate-node = NIST 800-53 Revision 4 Moderate baseline).
-# settingsRef 'default' = no auto-remediation (remediation review is a
-# separate, deliberate step — do NOT switch to default-auto-apply casually;
-# moderate-baseline remediations can cut lab connectivity).
+# Operator: stable channel (compliance-operator.v1.10.1), single-namespace
+# OG, Automatic installPlan (PRs #52/#54).
+#
+# Scans are DELIBERATELY not enabled in Git: the ACS/StackRox sensor
+# (rhacs-operator + stackrox chart, already installed) auto-creates and owns
+# the ScanSettingBinding 'daily-ocp' (+ matching ScanSetting) covering
+# ocp4-moderate{,-node}, ocp4-cis{,-node}, ocp4-pci-dss* and
+# rhcos4-moderate on a daily cron, with results surfaced in the ACS console.
+# Enabling scan.profiles here would re-run the same scans a second time
+# nightly. The chart's gated ScanSettingBinding template remains for
+# Git-owned profiles ACS does not cover (flip scan.enabled + profiles).
 enabled: true
 scan:
-  enabled: true
-  settingsRef: default
-  profiles:
-    - ocp4-moderate
-    - ocp4-moderate-node
+  enabled: false

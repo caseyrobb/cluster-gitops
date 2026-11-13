@@ -1,0 +1,13 @@
+# AAP self-service portal (redhat-rhaap-portal) on the homelab OCP cluster.
+# Only cluster-specific overrides live here; chart defaults (pluginMode=oci,
+# checkSSL=true, dynamic plugin set) stay upstream.
+redhat-rhaap-portal:
+  redhat-developer-hub:
+    global:
+      # Required by the chart's validations (required-values.yaml).
+      clusterRouterBase: apps.ocp.redcomet.ca
+      # Pins BOTH the OpenShift Route host and the Backstage baseUrl
+      # (rhdh.hostname helper prefers global.host) — must match the OAuth2
+      # app redirect URI registered in AAP:
+      # https://rhaap-portal.apps.ocp.redcomet.ca/api/auth/rhaap/handler/frame
+      host: rhaap-portal.apps.ocp.redcomet.ca

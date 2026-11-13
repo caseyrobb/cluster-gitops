@@ -8,6 +8,9 @@ dependencies:
   - name: redhat-rhaap-portal
     version: 2.3.1
     repository: https://charts.openshift.io/
+    # Tied to the parent chart's top-level `enabled` master switch (same
+    # gate as platform/mcp-server; CI asserts enabled=false renders empty).
+    condition: enabled
     # Remote dependency, resolved by the ArgoCD repo server at render time
     # (same pattern as platform/mcp-server). Secrets are NOT rendered by the
     # upstream chart: it only reads secrets-rhaap-portal /

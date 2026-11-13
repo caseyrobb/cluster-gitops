@@ -22,7 +22,7 @@ gha-runner-scale-set-controller:
   image:
     # Tag defaults to the chart appVersion (0.15.1); pinned explicitly so
     # version bumps touch one place.
-    tag: "0.15.1"
+    tag: "0.13.1"
   resources:
     requests:
       cpu: 50m

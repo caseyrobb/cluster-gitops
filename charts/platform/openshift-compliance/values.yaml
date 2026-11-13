@@ -1,0 +1,44 @@
+# OpenShift Compliance Operator lifecycle is OLM-driven (Subscription from
+# redhat-operators), packaged as a chart per this repo's GitOps convention.
+# Chart dir name == namespace because the platform ApplicationSet sets
+# destination.namespace to the chart basename — and `openshift-compliance`
+# is the namespace the operator docs expect (its ScanSettings/ContentRules
+# CRs and scan pods live there).
+#
+# Channel: `stable` tracks the current 1.x line (verified against the live
+# redhat-operators catalog: stable -> compliance-operator.v1.10.1; the
+# release-0.1/4.7 channels are EOL). The stable CSV supports
+# OwnNamespace + SingleNamespace; scans are cluster-wide resources created
+# by the operator itself, so a SingleNamespace OG is the right posture
+# (matches AAP/ESO homelab convention, small blast radius).
+#
+# Master switch for the whole chart (per-cluster overlays flip it false to
+# prune everything).
+enabled: true
+
+namespace:
+  create: true
+  name: openshift-compliance
+
+operatorGroup:
+  # SingleNamespace OG in openshift-compliance.
+  enabled: true
+
+subscription:
+  package: compliance-operator
+  channel: stable
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace
+  # Automatic matches the ESO/AAP/NMState posture for the homelab cluster.
+  installPlanApproval: Automatic
+
+scan:
+  # Renders a ScanSettingBinding that runs scan jobs for the given profiles
+  # using the operator-created default ScanSetting. Keep false for an
+  # operator-only install; profiles must exist in the live catalog
+  # (`oc get profile.command -n openshift-compliance`).
+  enabled: false
+  # Name of the operator-managed ScanSetting to bind against.
+  settingsRef: default
+  # Profile names, e.g. [nist800-53-moderate, anssi-bp2a].
+  profiles: []

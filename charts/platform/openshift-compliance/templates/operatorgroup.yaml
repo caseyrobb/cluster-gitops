@@ -1,0 +1,21 @@
+{{- if .Values.enabled }}
+{{- if .Values.operatorGroup.enabled }}
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: compliance-operator
+  namespace: {{ .Values.namespace.name }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  labels:
+    app.kubernetes.io/name: openshift-compliance
+    app.kubernetes.io/component: operator
+# SingleNamespace OG (same posture as AAP/NMState). The compliance operator
+# runs its scan pods in its own namespace; cluster-wide auditing still works
+# because it reads node/config resources via a cluster-scoped SA binding it
+# creates itself.
+spec:
+  targetNamespaces:
+  - {{ .Values.namespace.name }}
+{{- end }}
+{{- end }}

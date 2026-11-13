@@ -8,4 +8,7 @@ scaleSet:
   enabled: true
 gha-runner-scale-set:
   githubConfigUrl: https://github.com/crobb-org
+  runnerScaleSetName: arc-ocp  # fresh scale set name -> new GitHub-side set + message queue
+  scaleSetLabels:
+    - ocp
   minRunners: 1  # SMOKE TEST - revert to 0

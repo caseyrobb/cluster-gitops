@@ -1,0 +1,32 @@
+{{- if and .Values.enabled .Values.scan.enabled }}
+{{- if .Values.scan.profiles }}
+apiVersion: compliance.openshift.io/v1alpha1
+kind: ScanSettingBinding
+metadata:
+  name: gitops
+  namespace: {{ .Values.namespace.name }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+    # The compliance CRDs are created by the OLM operator, not by Git —
+    # skip the dry run for missing resource types instead of failing the
+    # first sync (same pattern as the NMState/CNV CRs).
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+  labels:
+    app.kubernetes.io/name: openshift-compliance
+    app.kubernetes.io/component: scan
+# Binds the operator-managed default ScanSetting (auto-created on install)
+# to one or more catalog profiles; the operator then renders ComplianceScan
+# jobs per profile + per node.
+spec:
+  settingsRef:
+    name: {{ .Values.scan.settingsRef }}
+    kind: ScanSetting
+    apiGroup: compliance.openshift.io/v1alpha1
+  profiles:
+    {{- range .Values.scan.profiles }}
+    - name: {{ . }}
+      kind: Profile
+      apiGroup: compliance.openshift.io/v1alpha1
+    {{- end }}
+{{- end }}
+{{- end }}

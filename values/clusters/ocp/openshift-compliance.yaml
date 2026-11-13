@@ -1,0 +1,5 @@
+# ocp (homelab) overlay — OpenShift Compliance Operator.
+# Operator-only for now: scan.enabled stays false until the live profile
+# catalog is verified (oc get profile.command -n openshift-compliance);
+# flip scan.enabled + scan.profiles in a follow-up PR to start scans.
+enabled: true

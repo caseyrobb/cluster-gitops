@@ -1,5 +1,14 @@
 # ocp (homelab) overlay — OpenShift Compliance Operator.
-# Operator-only for now: scan.enabled stays false until the live profile
-# catalog is verified (oc get profile.command -n openshift-compliance);
-# flip scan.enabled + scan.profiles in a follow-up PR to start scans.
+# Operator (stable channel, v1.10.1) installed via PR #52; scan verified
+# against the live profile catalog 2026-11-13 (ocp4-moderate /
+# ocp4-moderate-node = NIST 800-53 Revision 4 Moderate baseline).
+# settingsRef 'default' = no auto-remediation (remediation review is a
+# separate, deliberate step — do NOT switch to default-auto-apply casually;
+# moderate-baseline remediations can cut lab connectivity).
 enabled: true
+scan:
+  enabled: true
+  settingsRef: default
+  profiles:
+    - ocp4-moderate
+    - ocp4-moderate-node

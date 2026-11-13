@@ -1,0 +1,18 @@
+# Master switch: the workloads AppSet gate asserted by CI — with
+# enabled=false nothing renders (dependency `condition` + template gate).
+enabled: true
+
+# Defaults target the homelab OCP cluster (single-cluster repo, same
+# convention as the other charts); values/clusters/ocp/*.yaml remains the
+# overlay of record. The upstream chart hard-fails rendering when
+# clusterRouterBase keeps its placeholder value, so a sane default lives
+# here for CI's standalone `helm template` pass.
+redhat-rhaap-portal:
+  redhat-developer-hub:
+    global:
+      clusterRouterBase: apps.ocp.redcomet.ca
+      # Pins BOTH the OpenShift Route host and the Backstage baseUrl
+      # (rhdh.hostname helper prefers global.host) — must match the OAuth2
+      # app redirect URI registered in AAP:
+      # https://rhaap-portal.apps.ocp.redcomet.ca/api/auth/rhaap/handler/frame
+      host: rhaap-portal.apps.ocp.redcomet.ca

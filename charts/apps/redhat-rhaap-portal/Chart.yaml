@@ -1,0 +1,20 @@
+apiVersion: v2
+name: redhat-rhaap-portal
+description: "AAP self-service portal — wrapper for openshift-helm-charts/redhat-rhaap-portal (Backstage/RHDH based) with ESO-managed AAP OAuth + registry secrets"
+type: application
+version: 0.1.0
+appVersion: "2.3.1"
+dependencies:
+  - name: redhat-rhaap-portal
+    version: 2.3.1
+    repository: https://charts.openshift.io/
+    # Tied to the parent chart's top-level `enabled` master switch (same
+    # gate as platform/mcp-server; CI asserts enabled=false renders empty).
+    condition: enabled
+    # Remote dependency, resolved by the ArgoCD repo server at render time
+    # (same pattern as platform/mcp-server). Secrets are NOT rendered by the
+    # upstream chart: it only reads secrets-rhaap-portal /
+    # <release>-dynamic-plugins-registry-auth, which this wrapper supplies
+    # via ExternalSecrets below. The dir basename pins releaseName == the
+    # namespace == the release-name prefix the chart's pull-secret name
+    # convention requires.

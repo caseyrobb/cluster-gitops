@@ -1,4 +1,4 @@
-# OCP homelab: ARC v2 controller in actions-runner-system.
+# TEST: temporarily minRunners=1 for smoke test in actions-runner-system.
 # PAT stored in Vault (chaos/data/ocp/arc, key github_token) — scale set live.
 # NOTE: ARC v2 has NO personal-user scope — githubConfigUrl must be
 # enterprise/org/repo (user URLs 404 on the orgs/... registration-token
@@ -8,3 +8,6 @@ scaleSet:
   enabled: true
 gha-runner-scale-set:
   githubConfigUrl: https://github.com/crobb-org
+
+gha-runner-scale-set:
+  minRunners: 1  # SMOKE TEST - revert to 0
